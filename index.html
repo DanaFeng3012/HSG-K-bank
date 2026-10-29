@@ -279,6 +279,8 @@
     <span style="color:var(--text-soft);font-size:12px">·</span>
     <button class="btn ghost" id="btn-export-json" title="把所有数据（会议纪要、讨论点、changelog、拖拽日期）导出为 JSON，部署时用">📤 导出数据</button>
     <button class="btn ghost" id="btn-import-json" title="导入之前导出的 JSON 数据恢复现场">📥 导入数据</button>
+    <span style="color:var(--text-soft);font-size:12px">·</span>
+    <button class="btn" id="btn-publish" style="background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 12px rgba(34,197,94,.3);" title="一键把最新看板发布到 GitHub Pages 公网">🚀 发布到公网</button>
     <button class="btn" id="btn-new">+ 新建条目</button>
   </div>
 
@@ -453,6 +455,58 @@ function exportBoardJSON() {
   a.href = url; a.download = `K Bank Workshop看板数据_${new Date().toISOString().slice(0,10)}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
   showToast("✅ 数据已导出 JSON（26 条模块 + 所有纪要/讨论点/变更记录）");
+}
+
+// 🚀 发布到公网：导出 JSON + 弹出指引
+function publishToWeb() {
+  // ① 先导出 JSON
+  const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `K Bank Workshop看板数据_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+  // ② 弹出指引对话框
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:grid;place-items:center;animation:fade .15s ease;";
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:18px;padding:28px 32px;max-width:480px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:slidein .2s cubic-bezier(.2,.8,.3,1);font-family:var(--font);">
+      <div style="text-align:center;margin-bottom:18px;">
+        <div style="font-size:40px;margin-bottom:8px;">🚀</div>
+        <h2 style="font-size:18px;font-weight:700;color:#1a1d24;margin:0;">JSON 已导出！</h2>
+        <p style="color:#8a92a3;font-size:13px;margin:6px 0 0;">已自动下载到 Downloads 文件夹</p>
+      </div>
+
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:#15803d;margin-bottom:10px;">📋 发布只需 1 步：</div>
+        <div style="font-size:14px;color:#166534;line-height:1.7;">
+          打开 Finder → 进入这个文件夹 → <br>
+          <code style="background:#fff;border:1px solid #bbf7d0;border-radius:6px;padding:2px 6px;font-family:Menlo,monospace;font-size:12.5px;display:block;margin-top:6px;word-break:break-all;">/Users/danafeng/Documents/trae_projects/K Bank/</code>
+          <br>
+          然后 <strong>双击 🚀 一键推送.command</strong>
+        </div>
+      </div>
+
+      <div style="background:#f1f5f9;border-radius:10px;padding:12px 14px;font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.6;">
+        💡 推送脚本会自动识别你刚导出的 JSON，替换 data.json，然后 commit + push<br>
+        ✅ 1-2 分钟后所有人打开公网链接自动看到最新内容
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button id="publ-close" style="flex:1;padding:10px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-weight:600;color:#475569;">知道了</button>
+        <button id="publ-copy" style="flex:1;padding:10px;border-radius:10px;border:none;background:#22c55e;color:#fff;cursor:pointer;font-weight:600;box-shadow:0 2px 8px rgba(34,197,94,.3);">复制文件夹路径</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // 绑定关闭
+  overlay.querySelector("#publ-close").onclick = () => overlay.remove();
+  overlay.querySelector("#publ-copy").onclick = async () => {
+    const path = "/Users/danafeng/Documents/trae_projects/K Bank/";
+    try { await navigator.clipboard.writeText(path); showToast("✅ 路径已复制到剪贴板"); }
+    catch { /* 降级 */ const ta = document.createElement("textarea"); ta.value = path; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); showToast("✅ 路径已复制"); }
+  };
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 }
 
 function importBoardJSON() {
@@ -1578,6 +1632,7 @@ $("#btn-export-csv").onclick = exportSummaryCSV;
 $("#btn-export-minutes").onclick = exportAllMinutes;
 $("#btn-export-json").onclick = exportBoardJSON;
 $("#btn-import-json").onclick = importBoardJSON;
+$("#btn-publish").onclick = publishToWeb;
 
 const mergedAdded = applyUpdates(items);
 if (mergedAdded !== null && mergedAdded > 0) store.save(items);
