@@ -1626,13 +1626,31 @@ document.querySelectorAll(".tab").forEach(tab =>
     render();
   });
 ["#filter-status", "#filter-priority", "#search"].forEach(sel => $(sel).oninput = render);
+
+// 🔐 本地/公网模式判断——公网访客只看，隐藏 PMO 内部功能
+const HOST = location.hostname || "";
+const IS_LOCAL = HOST === "localhost" || HOST === "127.0.0.1"
+  || HOST.endsWith(".local") || HOST.endsWith(".lhr.life")
+  || location.protocol === "file:";
+
 $("#btn-new").onclick = () => openModal(null);
 $("#btn-export-html").onclick = exportSummaryHTML;
 $("#btn-export-csv").onclick = exportSummaryCSV;
 $("#btn-export-minutes").onclick = exportAllMinutes;
-$("#btn-export-json").onclick = exportBoardJSON;
-$("#btn-import-json").onclick = importBoardJSON;
-$("#btn-publish").onclick = publishToWeb;
+
+if (IS_LOCAL) {
+  // 本地模式：显示 PMO 内部功能（发布/导出/导入）
+  $("#btn-export-json").onclick = exportBoardJSON;
+  $("#btn-import-json").onclick = importBoardJSON;
+  $("#btn-publish").onclick = publishToWeb;
+} else {
+  // 公网模式：隐藏 PMO 内部功能
+  ["#btn-export-json", "#btn-import-json", "#btn-publish"].forEach(id => {
+    const el = $(id); if (el) el.style.display = "none";
+  });
+  // 隐藏中间的分隔点
+  document.querySelectorAll(".toolbar span").forEach(s => { if (s.textContent === "·") s.style.display = "none"; });
+}
 
 const mergedAdded = applyUpdates(items);
 if (mergedAdded !== null && mergedAdded > 0) store.save(items);
