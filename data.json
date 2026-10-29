@@ -1,0 +1,269 @@
+[
+  {
+    "id": 1,
+    "name": "Foreign Exchange (EX) 外汇",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/11/2 ~ 11/4",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：11/9~13、11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Deposit (TD/DD) 存款",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/11/5 ~ 11/6",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Common (BP) 公共",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/11/9 ~ 11/10",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "CIF (CI) 客户信息",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/11/11",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Accounting GL (AI) 会计总账",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/11/12 ~ 11/13",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：12/1~4、12/30~1/21"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Credit Limit & Collateral & Loan (CL/LN) 信贷",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/11/16 ~ 11/18",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "【里程碑】GAP Solution ①（Req'd/Solution 评审定稿）",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/11/19 ~ 11/30",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 8,
+    "name": "【里程碑】Refine Document ①",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/12/1 ~ 12/3",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 9,
+    "name": "【里程碑】Confirmation ①（GAP+FSD 集中确认）",
+    "priority": "第1轮",
+    "status": "plan",
+    "dates": "2026/12/4 ~ 12/7",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 10,
+    "name": "Payment Connectivity 支付连接",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/11/19 ~ 11/23",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 11,
+    "name": "HKMA Report 监管报表",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/11/24 ~ 11/25",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：12/1~4、12/28~1/21"
+    ]
+  },
+  {
+    "id": 12,
+    "name": "Advices & Forms 通知单与表单",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/11/26",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 13,
+    "name": "Operational & HO Report 运营报表",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/11/27",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：12/1~4、12/28~1/21"
+    ]
+  },
+  {
+    "id": 14,
+    "name": "ALM related* 资产负债相关",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/11/30、12/7",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 15,
+    "name": "Trade Finance (TF) 贸易融资",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/12/1 ~ 12/4",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：11/9~13、12/8~11"
+    ]
+  },
+  {
+    "id": 16,
+    "name": "【里程碑】GAP Solution ②（Req'd/Solution 评审定稿）",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/12/8 ~ 12/14",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 17,
+    "name": "【里程碑】Refine Document ②",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/12/15 ~ 12/16",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 18,
+    "name": "【里程碑】Confirmation ②（GAP+FSD 集中确认）",
+    "priority": "第2轮",
+    "status": "plan",
+    "dates": "2026/12/17 ~ 12/18",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 19,
+    "name": "Treasury & MM (IB/IL) 资金与货币市场",
+    "priority": "第3轮",
+    "status": "plan",
+    "dates": "2026/12/21 ~ 12/23",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"
+    ]
+  },
+  {
+    "id": 20,
+    "name": "Bond Trading and Issuance 债券交易与发行",
+    "priority": "第3轮",
+    "status": "plan",
+    "dates": "2026/12/24 ~ 2027/1/4",
+    "actual": "",
+    "owner": "",
+    "remarks": [
+      "行方BU不可用：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"
+    ]
+  },
+  {
+    "id": 21,
+    "name": "IRS/CCS 利率与货币互换",
+    "priority": "第3轮",
+    "status": "plan",
+    "dates": "2027/1/5 ~ 1/8",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 22,
+    "name": "Confirmation Matching 确认匹配",
+    "priority": "第3轮",
+    "status": "plan",
+    "dates": "2027/1/11",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 23,
+    "name": "Others 其他",
+    "priority": "第3轮",
+    "status": "plan",
+    "dates": "2027/1/12 ~ 1/15",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 24,
+    "name": "【里程碑】GAP Solution ③ + FS Document Cycle 1&2&3",
+    "priority": "第3轮",
+    "status": "plan",
+    "dates": "2027/1/18 ~ 1/22",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 25,
+    "name": "【里程碑】Refine Document ③",
+    "priority": "第3轮",
+    "status": "plan",
+    "dates": "2027/1/25 ~ 1/27",
+    "actual": "",
+    "owner": ""
+  },
+  {
+    "id": 26,
+    "name": "【里程碑】Sign Off（Cycle 1&2&3 合并签署）",
+    "priority": "全项目",
+    "status": "plan",
+    "dates": "2027/1/28 ~ 1/29",
+    "actual": "",
+    "owner": ""
+  }
+]
