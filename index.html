@@ -621,12 +621,13 @@ function openSettings() {
       saveDicts(); openSettings(); overlay.remove();
     }
   };
-  overlay.querySelector(".dict-del")?.onclick = (e) => {
+  const dictDelBtns = overlay.querySelectorAll(".dict-del");
+  dictDelBtns.forEach(btn => btn.onclick = (e) => {
     const row = e.target.closest(".dict-row");
     const kind = row.dataset.kind, i = parseInt(row.dataset.i);
     const arr = kind === "p" ? CONFIG.priorities : CONFIG.statuses;
     arr.splice(i, 1); saveDicts(); openSettings(); overlay.remove();
-  };
+  });
 
   overlay.querySelector("#settings-cancel").onclick = () => overlay.remove();
   overlay.querySelector("#settings-save").onclick = () => {
