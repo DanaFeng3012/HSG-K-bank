@@ -276,12 +276,11 @@
     <button class="btn ghost" id="btn-export-html">导出给 BA（HTML）</button>
     <button class="btn ghost" id="btn-export-csv">导出 CSV</button>
     <button class="btn ghost" id="btn-export-minutes">📥 导出纪要</button>
-    <span style="color:var(--text-soft);font-size:12px">·</span>
-    <button class="btn ghost" id="btn-export-json" title="把所有数据（会议纪要、讨论点、changelog、拖拽日期）导出为 JSON，部署时用">📤 导出数据</button>
-    <button class="btn ghost" id="btn-import-json" title="导入之前导出的 JSON 数据恢复现场">📥 导入数据</button>
-    <span style="color:var(--text-soft);font-size:12px">·</span>
     <button class="btn ghost" id="btn-settings" title="管理批次/阶段字典（自定义增删改）">⚙️ 设置</button>
-    <button class="btn" id="btn-publish" style="background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 12px rgba(34,197,94,.3);" title="一键把最新看板发布到 GitHub Pages 公网">🚀 发布到公网</button>
+    <span id="status-indicator" style="font-size:12px;color:var(--text-soft);margin-right:8px;display:inline-flex;align-items:center;gap:4px">
+      <span id="status-dot" style="width:7px;height:7px;border-radius:50%;background:#f59e0b"></span>
+      <span id="status-text">连接中…</span>
+    </span>
     <button class="btn" id="btn-new">+ 新建条目</button>
   </div>
 
@@ -297,6 +296,10 @@
   <div id="view-minutes" class="hidden" style="max-width:100%"></div>
   <div id="view-summary" class="hidden" style="max-width:100%"></div>
 </div>
+
+<!-- Firebase SDK (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <script>
 window.onerror = (msg, url, line, col, err) => {
@@ -434,40 +437,236 @@ const CONFIG = {
 
   // 编辑者名称（审计记录显示）
   editorName: "PMO",
+
+  // ===== Firebase Realtime Database 配置 =====
+  firebaseConfig: {
+    apiKey: "AIzaSyBt6KfNbR_T6dnlQFKFLueHvH-BLodlxHY",
+    authDomain: "hisun--k-bank.firebaseapp.com",
+    databaseURL: "https://hisun--k-bank-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "hisun--k-bank",
+    storageBucket: "hisun--k-bank.firebasestorage.app",
+    messagingSenderId: "1094452525209",
+    appId: "1:1094452525209:web:d14c542543a6b31ccd2008",
+  },
+  // Firebase 数据路径（所有看板条目会写到这里）
+  firebasePath: "kbank-items",
+  firebaseDictsPath: "kbank-dicts",
+  firebaseFilesPath: "kbank-files",
 };
 
 /* ============================================================
    ENGINE — usually no need to edit below this line.
    ============================================================ */
+
+// ---- 连接状态指示器 ----
+function setStatus(dotColor, text) {
+  const d = document.getElementById("status-dot");
+  const t = document.getElementById("status-text");
+  if (d) d.style.background = dotColor;
+  if (t) t.textContent = text;
+}
+
+// ---- Firebase 封装 ----
+let _fb = null;       // { app, db, itemsRef, dictsRef, connected: boolean }
+let _fbListening = false;
+let _fbLocalWrite = false;  // 标记"这是我刚写的，不要被 onValue 当成远端变化触发重绘"
+
+// 判断 Firebase 配置是否完整
+function firebaseConfigured() {
+  const c = CONFIG.firebaseConfig;
+  return !!(c && c.databaseURL && c.databaseURL.startsWith("https://"));
+}
+
+// 初始化 Firebase（配置不完整则返回 null）
+async function initFirebase() {
+  if (_fb) return _fb;
+  if (!firebaseConfigured()) { setStatus("#f59e0b", "未配置云端 · 离线模式"); return null; }
+  if (typeof firebase === "undefined") { setStatus("#ef4444", "Firebase SDK 未加载"); return null; }
+  try {
+    const app = firebase.initializeApp(CONFIG.firebaseConfig);
+    const db = firebase.database();
+    const itemsRef = db.ref(CONFIG.firebasePath);
+    const dictsRef = db.ref(CONFIG.firebaseDictsPath);
+    _fb = { app, db, itemsRef, dictsRef };
+    setStatus("#3b82f6", "云端已连接");
+    console.log("[Firebase] connected ✅");
+    return _fb;
+  } catch (e) {
+    console.warn("[Firebase] init failed:", e.message);
+    setStatus("#ef4444", "云端初始化失败");
+    return null;
+  }
+}
+
+// ---- store 层：Firebase 实时同步 + localStorage 离线缓存 ----
 const store = {
-  load() {
-    const raw = localStorage.getItem(CONFIG.storageKey);
-    if (raw) { try { return JSON.parse(raw); } catch (e) {} }
-    return structuredClone(CONFIG.seed);
+  _dictKey: "kbank-workshop-board-v2:dicts",
+  _itemKey: CONFIG.storageKey,
+
+  // 启动时：优先 Firebase → 次 fetch data.json → 最后 localStorage → seed
+  async load() {
+    // 1) 初始化 Firebase（如果配置了）
+    const fb = await initFirebase();
+
+    // 2) 加载 localStorage 缓存（始终加载，做离线 fallback）
+    let localItems = null, localDicts = null;
+    try {
+      const raw = localStorage.getItem(this._itemKey);
+      if (raw) localItems = JSON.parse(raw);
+      const dr = localStorage.getItem(this._dictKey);
+      if (dr) localDicts = JSON.parse(dr);
+    } catch {}
+
+    // 3) 从远端获取（Firebase 优先，fallback fetch data.json）
+    let remoteItems = null, remoteDicts = null;
+    if (fb) {
+      // ===== Firebase 模式 =====
+      try {
+        const snap = await fb.itemsRef.once("value");
+        const val = snap.val();
+        // Realtime DB 存的可能是对象（id 作为 key）或数组
+        if (val && typeof val === "object" && !Array.isArray(val)) {
+          remoteItems = Object.values(val);
+        } else if (Array.isArray(val)) {
+          remoteItems = val.filter(Boolean);
+        }
+
+        const dSnap = await fb.dictsRef.once("value");
+        const dVal = dSnap.val();
+        if (dVal && dVal.priorities && dVal.statuses) remoteDicts = dVal;
+
+        // 启动实时监听（别人改了自动收到）
+        this._startFirebaseListener(fb);
+        setStatus("#3b82f6", "云端已连接 · 实时同步中");
+      } catch (e) {
+        console.warn("[Firebase] read failed:", e.message);
+        setStatus("#f59e0b", "云端读取失败，用本地缓存");
+      }
+    } else {
+      // ===== Fallback: fetch data.json =====
+      try {
+        const resp = await fetch("data.json", { cache: "no-cache" });
+        if (resp.ok) {
+          const d = await resp.json();
+          if (Array.isArray(d)) remoteItems = d;
+          else if (d && Array.isArray(d.items)) {
+            remoteItems = d.items;
+            remoteDicts = d.dicts;
+          }
+        }
+      } catch {}
+    }
+
+    // 4) 合并：远端优先，保留本地独有条目
+    let finalItems;
+    if (remoteItems && remoteItems.length) {
+      const remoteIds = new Set(remoteItems.map(x => x.id));
+      const localOnly = (localItems || []).filter(x => !remoteIds.has(x.id));
+      // changelog/minutes 合并去重
+      const remoteMap = new Map(remoteItems.map(x => [x.id, x]));
+      const merged = remoteItems.map(r => {
+        const l = localItems?.find(x => x.id === r.id);
+        if (!l) return r;
+        const m = { ...r };
+        // changelog 合并（远端 + 本地独有的）
+        const rc = r.changelog || [], lc = l.changelog || [];
+        const rcKeys = new Set(rc.map(c => (c.time||"")+"|"+(c.from||"")+"|"+(c.to||"")));
+        m.changelog = [...rc, ...lc.filter(c => !rcKeys.has((c.time||"")+"|"+(c.from||"")+"|"+(c.to||"")))];
+        // minutes 合并
+        const rm = r.minutes || [], lm = l.minutes || [];
+        const rmKeys = new Set(rm.map(x => (x.time||"")+"|"+(x.title||"")));
+        m.minutes = [...rm, ...lm.filter(x => !rmKeys.has((x.time||"")+"|"+(x.title||"")))];
+        return m;
+      });
+      finalItems = [...merged, ...localOnly];
+    } else if (localItems && localItems.length) {
+      finalItems = localItems;
+      setStatus("#f59e0b", "离线模式（用本地缓存）");
+    } else {
+      finalItems = structuredClone(CONFIG.seed);
+      setStatus("#22c55e", "首次加载 · 已初始化");
+    }
+
+    // 5) dicts 合并
+    let finalDicts = remoteDicts || localDicts || { priorities: CONFIG.priorities, statuses: CONFIG.statuses };
+    if (localDicts && !remoteDicts) finalDicts = localDicts;
+    if (Array.isArray(finalDicts.priorities)) CONFIG.priorities = finalDicts.priorities;
+    if (Array.isArray(finalDicts.statuses)) CONFIG.statuses = finalDicts.statuses;
+
+    // 6) 写回 localStorage
+    localStorage.setItem(this._itemKey, JSON.stringify(finalItems));
+    localStorage.setItem(this._dictKey, JSON.stringify(finalDicts));
+
+    return finalItems;
   },
-  save(items) { localStorage.setItem(CONFIG.storageKey, JSON.stringify(items)); },
+
+  // 启动 Firebase 实时监听
+  _startFirebaseListener(fb) {
+    if (_fbListening) return;
+    _fbListening = true;
+    fb.itemsRef.on("value", (snap) => {
+      if (_fbLocalWrite) { _fbLocalWrite = false; return; }  // 我刚写的，跳过
+      const val = snap.val();
+      let remoteItems = null;
+      if (val && typeof val === "object" && !Array.isArray(val)) remoteItems = Object.values(val);
+      else if (Array.isArray(val)) remoteItems = val.filter(Boolean);
+      if (remoteItems && remoteItems.length) {
+        console.log("[Firebase] → 收到远端更新（" + remoteItems.length + " 条）");
+        // 应用远端数据，自动刷新
+        window.__applyRemoteUpdate && window.__applyRemoteUpdate(remoteItems);
+      }
+    });
+    fb.dictsRef.on("value", (snap) => {
+      if (_fbLocalWrite) { _fbLocalWrite = false; return; }
+      const d = snap.val();
+      if (d && Array.isArray(d.priorities) && Array.isArray(d.statuses)) {
+        CONFIG.priorities = d.priorities;
+        CONFIG.statuses = d.statuses;
+        localStorage.setItem(this._dictKey, JSON.stringify(d));
+        window.__refreshUI && window.__refreshUI();
+      }
+    });
+  },
+
+  // --- debounce 自动保存（Firebase + localStorage）---
+  save(items) {
+    // 始终写 localStorage（离线可用）
+    localStorage.setItem(this._itemKey, JSON.stringify(items));
+    localStorage.setItem(this._dictKey, JSON.stringify({ priorities: CONFIG.priorities, statuses: CONFIG.statuses }));
+
+    // 写 Firebase（debounce 300ms 防刷屏）
+    this._debounceSave(items);
+  },
+
+  _debounceSave(items) {
+    if (!firebaseConfigured() || !_fb) return;
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(async () => {
+      try {
+        _fbLocalWrite = true;  // 标记"这是我写的"，让 onValue 监听跳过
+        // Realtime DB 不直接存数组，用 id 做 key 存储
+        const obj = {};
+        items.forEach(it => { obj[it.id] = it; });
+        await _fb.itemsRef.set(obj);
+        await _fb.dictsRef.set({ priorities: CONFIG.priorities, statuses: CONFIG.statuses });
+        setStatus("#3b82f6", "云端已同步 ✓");
+        // 3 秒后恢复
+        setTimeout(() => setStatus("#3b82f6", "实时同步中"), 3000);
+      } catch (e) {
+        console.warn("[Firebase] save failed:", e.message);
+        setStatus("#ef4444", "保存失败，请检查网络");
+      }
+    }, 300);
+  },
 };
 
-// ========== 自定义字典管理（批次/阶段） ==========
-// 存到 localStorage，用户可自定义增删改
-const DICT_KEY = "kbank-workshop-board-v2:dicts";
+// dicts 变量保留（向后兼容）
+const DICT_KEY = store._dictKey;
 const DEFAULT_PRIORITIES = CONFIG.priorities;
 const DEFAULT_STATUSES = CONFIG.statuses;
-
-function loadDicts() {
-  try {
-    const raw = localStorage.getItem(DICT_KEY);
-    if (raw) {
-      const d = JSON.parse(raw);
-      if (Array.isArray(d.priorities) && d.priorities.length) CONFIG.priorities = d.priorities;
-      if (Array.isArray(d.statuses) && d.statuses.length) CONFIG.statuses = d.statuses;
-    }
-  } catch { /* 忽略 */ }
-}
 function saveDicts() {
   localStorage.setItem(DICT_KEY, JSON.stringify({ priorities: CONFIG.priorities, statuses: CONFIG.statuses }));
 }
-loadDicts(); // 启动时加载
 
 // 把 "2026/11/2 ~ 11/4" 这种文本日期解析成 {start, end}
 function parseDateRange(str) {
@@ -667,41 +866,39 @@ function importBoardJSON() {
     r.onload = () => {
       try {
         const data = JSON.parse(r.result);
-        if (!Array.isArray(data)) { showToast("❌ JSON 格式不对，应该是数组"); return; }
-        items = migrate(data);
+        let newItems, newDicts;
+        if (Array.isArray(data)) {
+          newItems = data; // 纯数组（向后兼容）
+        } else if (data && Array.isArray(data.items)) {
+          newItems = data.items;
+          newDicts = data.dicts;
+        } else {
+          showToast("❌ JSON 格式不对（应该是数组或 {items:[], dicts:{}}）"); return;
+        }
+        // 合并 dicts
+        if (newDicts) {
+          if (Array.isArray(newDicts.priorities)) CONFIG.priorities = newDicts.priorities;
+          if (Array.isArray(newDicts.statuses)) CONFIG.statuses = newDicts.statuses;
+        }
+        // 合并 items（不是覆盖！保留本地独有的 + 用导入的更新现有）
+        const importMap = new Map(newItems.map(x => [x.id, x]));
+        const localIds = new Set(items.map(x => x.id));
+        items = items.map(it => {
+          const r = importMap.get(it.id); if (!r) return it;
+          return { ...it, ...r }; // 导入的数据优先
+        });
+        // 导入独有的条目也加上
+        items = [...items, ...newItems.filter(x => !localIds.has(x.id))];
+        items = migrate(items);
         store.save(items);
-        render();
-        showToast(`✅ 已导入 ${items.length} 条模块数据`);
+        initFilters(); render();
+        showToast(`✅ 已导入 ${newItems.length} 条（合并后本地共 ${items.length} 条）`);
       } catch(e) { showToast("❌ 解析失败：" + e.message); }
     };
     r.readAsText(f);
   };
   inp.click();
 }
-
-// 启动时自动尝试加载同目录 data.json（部署到 Vercel 后，把 data.json 和 HTML 放一起就能预填）
-(async function autoLoadRemoteData() {
-  try {
-    // file:// 协议 fetch 会被拦，只有 http(s) 才走这段
-    if (location.protocol !== "file:" && location.hostname !== "") {
-      const resp = await fetch("data.json", { cache: "no-cache" });
-      if (resp.ok) {
-        const remote = await resp.json();
-        if (Array.isArray(remote) && remote.length) {
-          // 远端有更新 → 合并进本地（本地已填的优先，远端补充新数据）
-          const localIds = new Set((store.load() || []).map(x => x.id));
-          const merged = (store.load() || []).slice();
-          remote.forEach(rem => {
-            if (!localIds.has(rem.id)) merged.push(rem);
-          });
-          items = migrate(merged);
-          store.save(items);
-          console.log("📥 自动加载远端 data.json，新增 " + (merged.length - localIds.size) + " 条");
-        }
-      }
-    }
-  } catch(_) { /* 本地 file:// 忽略 */ }
-})();
 
 let currentView = "table";
 
@@ -727,7 +924,42 @@ function migrate(list) {
   return list;
 }
 
-let items = migrate(store.load());
+let items = [];
+(async () => {
+  items = migrate(await store.load());
+  const mergedAdded = applyUpdates(items);
+  persist();
+  initFilters();
+  render();
+  if (mergedAdded !== null && mergedAdded > 0) showToast(`已同步会议纪要增量更新：新增 ${mergedAdded} 条（数据版本 v${CONFIG.dataVersion}）`);
+
+  // ---- Firebase 实时更新处理 ----
+  // 远端数据到达时合并（changelog/minutes 去重），自动刷新
+  window.__applyRemoteUpdate = (remoteItems) => {
+    if (!remoteItems || !remoteItems.length) return;
+    const remoteMap = new Map(remoteItems.map(x => [x.id, x]));
+    const remoteIds = new Set(remoteItems.map(x => x.id));
+    const localOnly = items.filter(x => !remoteIds.has(x.id));
+    items = remoteItems.map(r => {
+      const l = items.find(x => x.id === r.id);
+      if (!l) return r;
+      const m = { ...r };
+      const rc = r.changelog || [], lc = l.changelog || [];
+      const rcKeys = new Set(rc.map(c => (c.time||"")+"|"+(c.from||"")+"|"+(c.to||"")));
+      m.changelog = [...rc, ...lc.filter(c => !rcKeys.has((c.time||"")+"|"+(c.from||"")+"|"+(c.to||"")))];
+      const rm = r.minutes || [], lm = l.minutes || [];
+      const rmKeys = new Set(rm.map(x => (x.time||"")+"|"+(x.title||"")));
+      m.minutes = [...rm, ...lm.filter(x => !rmKeys.has((x.time||"")+"|"+(x.title||"")))];
+      return m;
+    }).concat(localOnly);
+    localStorage.setItem(store._itemKey, JSON.stringify(items));
+    render();
+    showToast("🔄 收到团队成员的更新，已自动刷新");
+  };
+  window.__refreshUI = () => {
+    initFilters(); render();
+  };
+})();
 
 function filtered() {
   const s = $("#filter-status").value, p = $("#filter-priority").value, q = $("#search").value.trim().toLowerCase();
@@ -1344,15 +1576,16 @@ function renderMinutes() {
           <span style="color:var(--text-soft);font-size:11px;font-weight:500;margin-left:8px">${esc(it.dates || "")}</span>
         </div>`;
 
-      mins.forEach((m, idx) => {
-        html += `<details style="margin-bottom:8px;background:#fafbfd;border:1px solid var(--border);border-radius:8px;padding:10px 14px">
-          <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600">
-            <span>${esc(m.title || "未命名纪要")}</span>
-            <span style="color:var(--text-soft);font-size:11px;font-weight:500;margin-left:10px;flex-shrink:0">
-              ${esc(m.time || "")} · ${esc(m.user || "未知")}${m.source ? ` · ${esc(m.source)}` : ""}
+      mins.forEach(m => {
+        html += `<details open style="margin-bottom:10px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+          <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;font-weight:600;list-style:none">
+            <span>📄 ${esc(m.title || "未命名纪要")}</span>
+            <span style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+              <span style="color:var(--text-soft);font-size:11px;font-weight:500">${esc(m.time || "")} · ${esc(m.user || "未知")}</span>
+              ${minuteFileLink(m)}
             </span>
           </summary>
-          <div style="margin-top:10px;font-size:12.5px;line-height:1.65;color:#333;white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:6px;padding:12px">${esc(m.content || "")}</div>
+          <div style="margin-top:10px;font-size:12.5px;line-height:1.7;color:#333;white-space:pre-wrap;background:#fafbfd;border:1px solid var(--border);border-radius:6px;padding:12px;max-height:300px;overflow:auto">${esc(m.content || "")}</div>
         </details>`;
       });
 
@@ -1369,6 +1602,44 @@ function renderMinutes() {
 // 按 id 找条目（给 renderMinutes 里 onclick 用）
 function getItemById(id) {
   return items.find(it => it.id === id);
+}
+
+/* ---- 纪要原文件：文件二进制存于 Firebase Realtime DB /kbank-files/<id> ---- */
+function minuteFileUrl(fileId) {
+  return `${CONFIG.firebaseConfig.databaseURL}/${CONFIG.firebaseFilesPath}/${encodeURIComponent(fileId)}.json`;
+}
+
+function minuteFileLink(m) {
+  if (!m || !m.file || !m.file.id) return "";
+  const id = String(m.file.id).replace(/'/g, "\\'");
+  const name = String(m.file.name || "会议纪要").replace(/'/g, "\\'");
+  const size = m.file.size ? ` · ${(m.file.size / 1024).toFixed(0)} KB` : "";
+  return `<a href="javascript:void(0)" onclick="downloadMinuteFile('${id}','${name}')"
+    style="display:inline-flex;align-items:center;padding:3px 9px;font-size:11.5px;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:6px;white-space:nowrap">⬇ 下载原文件${size}</a>`;
+}
+
+async function downloadMinuteFile(id, fallbackName) {
+  try {
+    showToast("正在获取原文件…");
+    const res = await fetch(minuteFileUrl(id));
+    const rec = await res.json();
+    if (!rec || !rec.data) { showToast("原文件不存在或已被清理"); return; }
+    const bin = atob(rec.data);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: rec.mime || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = rec.name || fallbackName || "minutes";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    showToast(`已下载：${a.download}`);
+  } catch (e) {
+    showToast("下载失败：" + e.message);
+  }
 }
 
 function renderSummary() {
@@ -1737,7 +2008,10 @@ function openDetail(item) {
   const mins = (item.minutes || []).sort((a,b) => (b.time||"").localeCompare(a.time||""));
   const minsSec = mins.length ? `<div class="d-sec"><div class="d-title" style="color:#1d8db5">📁 原版会议纪要（${mins.length} 份）</div>
     ${mins.map(m => `<details style="margin-bottom:6px;background:#fafbfd;border:1px solid var(--border);border-radius:6px;padding:6px 10px">
-      <summary style="cursor:pointer;font-weight:600;font-size:12.5px">${esc(m.title || "未命名纪要")} <span style="color:var(--text-soft);font-weight:400;margin-left:8px">${esc(m.time||"")} · ${esc(m.user||"")}</span></summary>
+      <summary style="cursor:pointer;font-weight:600;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span>${esc(m.title || "未命名纪要")} <span style="color:var(--text-soft);font-weight:400;margin-left:8px">${esc(m.time||"")} · ${esc(m.user||"")}</span></span>
+        ${minuteFileLink(m)}
+      </summary>
       <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#333;white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:4px;padding:8px">${esc(m.content || "")}</div>
     </details>`).join("")}
   </div>` : "";
@@ -1807,37 +2081,61 @@ document.querySelectorAll(".tab").forEach(tab =>
   });
 ["#filter-status", "#filter-priority", "#search"].forEach(sel => $(sel).oninput = render);
 
-// 🔐 本地/公网模式判断——公网访客只看，隐藏 PMO 内部功能
-const HOST = location.hostname || "";
-const IS_LOCAL = HOST === "localhost" || HOST === "127.0.0.1"
-  || HOST.endsWith(".local") || HOST.endsWith(".lhr.life")
-  || location.protocol === "file:";
-
+// 🔗 Firebase 模式下不再区分本地/公网——所有人读写同一个云端，编辑自动同步
 $("#btn-new").onclick = () => openModal(null);
 $("#btn-export-html").onclick = exportSummaryHTML;
 $("#btn-export-csv").onclick = exportSummaryCSV;
 $("#btn-export-minutes").onclick = exportAllMinutes;
+$("#btn-settings").onclick = openSettings;
 
-if (IS_LOCAL) {
-  // 本地模式：显示 PMO 内部功能（发布/导出/导入/字典管理）
-  $("#btn-export-json").onclick = exportBoardJSON;
-  $("#btn-import-json").onclick = importBoardJSON;
-  $("#btn-publish").onclick = publishToWeb;
-  $("#btn-settings").onclick = openSettings;
-} else {
-  // 公网模式：隐藏 PMO 内部功能
-  ["#btn-export-json", "#btn-import-json", "#btn-publish", "#btn-settings"].forEach(id => {
-    const el = $(id); if (el) el.style.display = "none";
-  });
-  // 隐藏中间的分隔点
-  document.querySelectorAll(".toolbar span").forEach(s => { if (s.textContent === "·") s.style.display = "none"; });
+// 🔄 手动同步（保留：Firebase 配置为空时 fallback 到 fetch data.json）
+async function manualSync() {
+  try {
+    const resp = await fetch("data.json", { cache: "no-cache" });
+    if (!resp.ok) { showToast("❌ 拉取失败（本地模式没有 data.json）"); return; }
+    const remote = await resp.json();
+    const remoteItems = Array.isArray(remote) ? remote : (remote.items || []);
+    if (!remoteItems.length) { showToast("⚠️  远端没有数据"); return; }
+    const remoteMap = new Map(remoteItems.map(x => [x.id, x]));
+    const localIds = new Set(items.map(x => x.id));
+    // 合并
+    items = items.map(it => {
+      const r = remoteMap.get(it.id); if (!r) return it;
+      const merged = { ...it, ...r };
+      const rc = r.changelog || [], lc = it.changelog || [];
+      const rcKeys = new Set(rc.map(c => c.time + "|" + c.from + "|" + c.to));
+      merged.changelog = [...rc, ...lc.filter(c => !rcKeys.has(c.time + "|" + c.from + "|" + c.to))];
+      const rm = r.minutes || [], lm = it.minutes || [];
+      const rmKeys = new Set(rm.map(m => (m.time||"") + "|" + (m.title||"")));
+      merged.minutes = [...rm, ...lm.filter(m => !rmKeys.has((m.time||"") + "|" + (m.title||"")))];
+      ["confirmed","disputes","discussions","gapConclusion","nextStep","deliverables","remarks"].forEach(f => {
+        merged[f] = [...new Set([...linesOf(r[f]), ...linesOf(it[f])])];
+      });
+      return merged;
+    });
+    items = [...items, ...remoteItems.filter(x => !localIds.has(x.id))];
+    // dicts 合并
+    if (remote.dicts) {
+      if (Array.isArray(remote.dicts.priorities)) CONFIG.priorities = remote.dicts.priorities;
+      if (Array.isArray(remote.dicts.statuses)) CONFIG.statuses = remote.dicts.statuses;
+    }
+    persist(); initFilters(); render();
+    showToast(`✅ 已同步（${remoteItems.length} 条模块）`);
+  } catch (e) { showToast("❌ 同步失败：" + e.message); }
 }
 
-const mergedAdded = applyUpdates(items);
-if (mergedAdded !== null && mergedAdded > 0) store.save(items);
-initFilters();
-render();
-if (mergedAdded !== null && mergedAdded > 0) showToast(`已同步会议纪要增量更新：新增 ${mergedAdded} 条（数据版本 v${CONFIG.dataVersion}）`);
+// 📤 导出时也带 dicts（让 dicts 能随数据传输）
+const _origExport = exportBoardJSON;
+exportBoardJSON = function() {
+  // 导出完整包：{ items: [...], dicts: {...} }
+  const payload = { items, dicts: { priorities: CONFIG.priorities, statuses: CONFIG.statuses } };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `K Bank看板完整数据_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  showToast("✅ 已导出完整数据（含字典 + changelog + 纪要）");
+};
 </script>
 </body>
 </html>

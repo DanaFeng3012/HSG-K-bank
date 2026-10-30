@@ -29,10 +29,31 @@ FIREBASE_DB = "hisun--k-bank-default-rtdb"
 API_BASE = f"https://{FIREBASE_DB}.asia-southeast1.firebasedatabase.app"
 ITEMS_URL = f"{API_BASE}/kbank-items.json"
 DICTS_URL = f"{API_BASE}/kbank-dicts.json"
+FILES_URL = f"{API_BASE}/kbank-files"
 
 # 看板条目（从 data.json 同步 seed 出来的）
 # —— 如果模块名对不上，用 id 也行（查下面 data.json 的 id 列）
 # =========================================================
+
+
+# ---------- 原文件上传 ----------
+def upload_file(local_path, file_id=None):
+    """把纪要原文件以 base64 存到 /kbank-files/<id>，返回挂到 minutes 的元数据"""
+    import base64
+    import mimetypes
+    import os
+    if not file_id:
+        base = os.path.basename(local_path).rsplit(".", 1)[0]
+        file_id = re.sub(r"[^A-Za-z0-9_-]+", "-", base).strip("-").lower()
+    raw = open(local_path, "rb").read()
+    rec = {
+        "name": os.path.basename(local_path),
+        "mime": mimetypes.guess_type(local_path)[0] or "application/octet-stream",
+        "size": len(raw),
+        "data": base64.b64encode(raw).decode("ascii"),
+    }
+    fb_put(f"{FILES_URL}/{file_id}.json", rec)
+    return {"id": file_id, "name": rec["name"], "size": rec["size"], "mime": rec["mime"]} 
 
 
 # ---------- REST 工具 ----------
@@ -360,7 +381,17 @@ def import_json(path, dry_run=False):
 
         # 逐字段统计"新增多少条"（去重后）
         changes = []
-        for key, val in (u.get("add") or {}).items():
+        add_blob = u.get("add") or {}
+        # 纪要原文件：条目里带 _file 路径则先上传到 /kbank-files
+        for m in (add_blob.get("minutes") or []):
+            fp = m.pop("_file", None)
+            if fp:
+                if dry_run:
+                    print(f"  📎 将上传原文件: {os.path.basename(fp)}")
+                else:
+                    m["file"] = upload_file(fp)
+                    print(f"  📎 已上传原文件: {m['file']['name']}（{m['file']['size'] // 1024 or 1} KB）")
+        for key, val in add_blob.items():
             if not val:
                 continue
             if key == "minutes":

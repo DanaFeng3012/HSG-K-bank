@@ -451,6 +451,7 @@ const CONFIG = {
   // Firebase 数据路径（所有看板条目会写到这里）
   firebasePath: "kbank-items",
   firebaseDictsPath: "kbank-dicts",
+  firebaseFilesPath: "kbank-files",
 };
 
 /* ============================================================
@@ -1575,15 +1576,16 @@ function renderMinutes() {
           <span style="color:var(--text-soft);font-size:11px;font-weight:500;margin-left:8px">${esc(it.dates || "")}</span>
         </div>`;
 
-      mins.forEach((m, idx) => {
-        html += `<details style="margin-bottom:8px;background:#fafbfd;border:1px solid var(--border);border-radius:8px;padding:10px 14px">
-          <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600">
-            <span>${esc(m.title || "未命名纪要")}</span>
-            <span style="color:var(--text-soft);font-size:11px;font-weight:500;margin-left:10px;flex-shrink:0">
-              ${esc(m.time || "")} · ${esc(m.user || "未知")}${m.source ? ` · ${esc(m.source)}` : ""}
+      mins.forEach(m => {
+        html += `<details open style="margin-bottom:10px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+          <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;font-weight:600;list-style:none">
+            <span>📄 ${esc(m.title || "未命名纪要")}</span>
+            <span style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+              <span style="color:var(--text-soft);font-size:11px;font-weight:500">${esc(m.time || "")} · ${esc(m.user || "未知")}</span>
+              ${minuteFileLink(m)}
             </span>
           </summary>
-          <div style="margin-top:10px;font-size:12.5px;line-height:1.65;color:#333;white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:6px;padding:12px">${esc(m.content || "")}</div>
+          <div style="margin-top:10px;font-size:12.5px;line-height:1.7;color:#333;white-space:pre-wrap;background:#fafbfd;border:1px solid var(--border);border-radius:6px;padding:12px;max-height:300px;overflow:auto">${esc(m.content || "")}</div>
         </details>`;
       });
 
@@ -1600,6 +1602,44 @@ function renderMinutes() {
 // 按 id 找条目（给 renderMinutes 里 onclick 用）
 function getItemById(id) {
   return items.find(it => it.id === id);
+}
+
+/* ---- 纪要原文件：文件二进制存于 Firebase Realtime DB /kbank-files/<id> ---- */
+function minuteFileUrl(fileId) {
+  return `${CONFIG.firebaseConfig.databaseURL}/${CONFIG.firebaseFilesPath}/${encodeURIComponent(fileId)}.json`;
+}
+
+function minuteFileLink(m) {
+  if (!m || !m.file || !m.file.id) return "";
+  const id = String(m.file.id).replace(/'/g, "\\'");
+  const name = String(m.file.name || "会议纪要").replace(/'/g, "\\'");
+  const size = m.file.size ? ` · ${(m.file.size / 1024).toFixed(0)} KB` : "";
+  return `<a href="javascript:void(0)" onclick="downloadMinuteFile('${id}','${name}')"
+    style="display:inline-flex;align-items:center;padding:3px 9px;font-size:11.5px;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:6px;white-space:nowrap">⬇ 下载原文件${size}</a>`;
+}
+
+async function downloadMinuteFile(id, fallbackName) {
+  try {
+    showToast("正在获取原文件…");
+    const res = await fetch(minuteFileUrl(id));
+    const rec = await res.json();
+    if (!rec || !rec.data) { showToast("原文件不存在或已被清理"); return; }
+    const bin = atob(rec.data);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: rec.mime || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = rec.name || fallbackName || "minutes";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    showToast(`已下载：${a.download}`);
+  } catch (e) {
+    showToast("下载失败：" + e.message);
+  }
 }
 
 function renderSummary() {
@@ -1968,7 +2008,10 @@ function openDetail(item) {
   const mins = (item.minutes || []).sort((a,b) => (b.time||"").localeCompare(a.time||""));
   const minsSec = mins.length ? `<div class="d-sec"><div class="d-title" style="color:#1d8db5">📁 原版会议纪要（${mins.length} 份）</div>
     ${mins.map(m => `<details style="margin-bottom:6px;background:#fafbfd;border:1px solid var(--border);border-radius:6px;padding:6px 10px">
-      <summary style="cursor:pointer;font-weight:600;font-size:12.5px">${esc(m.title || "未命名纪要")} <span style="color:var(--text-soft);font-weight:400;margin-left:8px">${esc(m.time||"")} · ${esc(m.user||"")}</span></summary>
+      <summary style="cursor:pointer;font-weight:600;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span>${esc(m.title || "未命名纪要")} <span style="color:var(--text-soft);font-weight:400;margin-left:8px">${esc(m.time||"")} · ${esc(m.user||"")}</span></span>
+        ${minuteFileLink(m)}
+      </summary>
       <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#333;white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:4px;padding:8px">${esc(m.content || "")}</div>
     </details>`).join("")}
   </div>` : "";
