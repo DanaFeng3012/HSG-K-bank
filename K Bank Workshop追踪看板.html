@@ -1547,7 +1547,7 @@ function renderMinutes() {
   // 按批次分组
   const byPrio = {};
   data.forEach(it => { (byPrio[it.priority] = byPrio[it.priority] || []).push(it); });
-  const batches = CONFIG.priorities.map(p => p.label).filter(b => byPrio[b]);
+  const batches = CONFIG.priorities.map(p => p.key || p.label).filter(b => byPrio[b]);
 
   let html = `<div class="card" style="padding:28px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
@@ -1561,7 +1561,7 @@ function renderMinutes() {
     </div>`;
 
   batches.forEach(batch => {
-    const p = CONFIG.priorities.find(x => x.label === batch);
+    const p = CONFIG.priorities.find(x => (x.key || x.label) === batch);
     html += `<div style="margin-bottom:30px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <span class="badge" style="background:${p.color};color:${p.text}">${esc(batch)}</span>
@@ -1663,14 +1663,14 @@ function openExportPicker(op) {
   // 按批次分组
   const byPrio = {};
   data.forEach(it => { (byPrio[it.priority] = byPrio[it.priority] || []).push(it); });
-  const batches = CONFIG.priorities.map(p => p.label).filter(b => byPrio[b]);
+  const batches = CONFIG.priorities.map(p => p.key || p.label).filter(b => byPrio[b]);
 
   const title = op === "csv" ? "导出 CSV" : op === "html" ? "导出给 BA（HTML）" : "导出会议纪要";
   const formatName = op === "csv" ? "CSV" : op === "html" ? "HTML" : "Markdown";
 
   let listHTML = "";
   batches.forEach(batch => {
-    const p = CONFIG.priorities.find(x => x.label === batch);
+    const p = CONFIG.priorities.find(x => (x.key || x.label) === batch);
     listHTML += `<div style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <span class="badge" style="background:${p.color};color:${p.text}">${esc(batch)}</span>
