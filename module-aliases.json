@@ -1,0 +1,19 @@
+{
+  "Foreign Exchange": ["外汇", "FX", "EX", "外匯", "foreign exchange", "即期", "远期"],
+  "Deposit": ["存款", "TD", "DD", "定存", "定期存款", "活期存款", "存期"],
+  "Common": ["公共", "BP", "基础模块", "common"],
+  "CIF": ["客户信息", "客户资料", "客户主档", "customer information"],
+  "Accounting GL": ["会计总账", "总账", "GL", "记账", "会计分录"],
+  "Credit Limit": ["信贷", "额度", "抵押", "贷款", "CL", "LN", "授信"],
+  "Payment Connectivity": ["支付连接", "支付", "清算", "payment", "汇款通道"],
+  "HKMA Report": ["监管报表", "HKMA", "监管报送", "金管局报表"],
+  "Advices & Forms": ["通知单", "表单", "advices", "forms", "通知书"],
+  "Operational & HO Report": ["运营报表", "HO报表", "总行报表", "操作报表"],
+  "ALM related": ["资产负债", "ALM", "流动性", "利率风险"],
+  "Trade Finance": ["贸易融资", "TF", "信用证", "LC", "托收", "trade finance"],
+  "Treasury & MM": ["资金", "货币市场", "MM", "treasury", "拆借", "同业"],
+  "Bond Trading": ["债券", "bond", "发债", "债券交易"],
+  "IRS/CCS": ["利率互换", "货币互换", "IRS", "CCS", "互换"],
+  "Confirmation Matching": ["确认匹配", "对盘", "matching", "交易确认"],
+  "Others": ["其他", "others", "杂项"]
+}
