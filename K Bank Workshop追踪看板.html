@@ -557,28 +557,11 @@ const store = {
       } catch {}
     }
 
-    // 4) 合并：远端优先，保留本地独有条目
+    // 4) 合并：云端为准（云端删除/清空也必须生效），本地缓存只作离线兜底
     let finalItems;
     if (remoteItems && remoteItems.length) {
-      const remoteIds = new Set(remoteItems.map(x => x.id));
-      const localOnly = (localItems || []).filter(x => !remoteIds.has(x.id));
-      // changelog/minutes 合并去重
-      const remoteMap = new Map(remoteItems.map(x => [x.id, x]));
-      const merged = remoteItems.map(r => {
-        const l = localItems?.find(x => x.id === r.id);
-        if (!l) return r;
-        const m = { ...r };
-        // changelog 合并（远端 + 本地独有的）
-        const rc = r.changelog || [], lc = l.changelog || [];
-        const rcKeys = new Set(rc.map(c => (c.time||"")+"|"+(c.from||"")+"|"+(c.to||"")));
-        m.changelog = [...rc, ...lc.filter(c => !rcKeys.has((c.time||"")+"|"+(c.from||"")+"|"+(c.to||"")))];
-        // minutes 合并
-        const rm = r.minutes || [], lm = l.minutes || [];
-        const rmKeys = new Set(rm.map(x => (x.time||"")+"|"+(x.title||"")));
-        m.minutes = [...rm, ...lm.filter(x => !rmKeys.has((x.time||"")+"|"+(x.title||"")))];
-        return m;
-      });
-      finalItems = [...merged, ...localOnly];
+      // 旧逻辑对 changelog/minutes 做并集，导致云端已删除的纪要/编辑记录被本地缓存"复活"
+      finalItems = remoteItems.filter(Boolean);
     } else if (localItems && localItems.length) {
       finalItems = localItems;
       setStatus("#f59e0b", "离线模式（用本地缓存）");
@@ -934,25 +917,12 @@ let items = [];
   if (mergedAdded !== null && mergedAdded > 0) showToast(`已同步会议纪要增量更新：新增 ${mergedAdded} 条（数据版本 v${CONFIG.dataVersion}）`);
 
   // ---- Firebase 实时更新处理 ----
-  // 远端数据到达时合并（changelog/minutes 去重），自动刷新
+  // 云端为准：整体替换，不做并集（否则云端删掉的纪要/编辑记录会被当前页面缓存复活）
   window.__applyRemoteUpdate = (remoteItems) => {
     if (!remoteItems || !remoteItems.length) return;
-    const remoteMap = new Map(remoteItems.map(x => [x.id, x]));
-    const remoteIds = new Set(remoteItems.map(x => x.id));
-    const localOnly = items.filter(x => !remoteIds.has(x.id));
-    items = remoteItems.map(r => {
-      const l = items.find(x => x.id === r.id);
-      if (!l) return r;
-      const m = { ...r };
-      const rc = r.changelog || [], lc = l.changelog || [];
-      const rcKeys = new Set(rc.map(c => (c.time||"")+"|"+(c.from||"")+"|"+(c.to||"")));
-      m.changelog = [...rc, ...lc.filter(c => !rcKeys.has((c.time||"")+"|"+(c.from||"")+"|"+(c.to||"")))];
-      const rm = r.minutes || [], lm = l.minutes || [];
-      const rmKeys = new Set(rm.map(x => (x.time||"")+"|"+(x.title||"")));
-      m.minutes = [...rm, ...lm.filter(x => !rmKeys.has((x.time||"")+"|"+(x.title||"")))];
-      return m;
-    }).concat(localOnly);
+    items = remoteItems.filter(Boolean);
     localStorage.setItem(store._itemKey, JSON.stringify(items));
+    initFilters();
     render();
     showToast("🔄 收到团队成员的更新，已自动刷新");
   };
