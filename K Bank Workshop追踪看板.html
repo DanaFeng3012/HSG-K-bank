@@ -154,6 +154,15 @@
   .ticket .t-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--text-soft); font-size: 12px; }
   .ticket .t-del { position: absolute; top: 8px; right: 8px; }
   .ticket:hover .t-del { opacity: 1; }
+  .ticket .t-secs { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
+  .ticket .t-toggle { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent); list-style: none; user-select: none; }
+  .ticket .t-toggle::-webkit-details-marker { display: none; }
+  .ticket .t-secs[open] .t-toggle { color: var(--text-soft); }
+  .ticket .t-secs-body { margin-top: 8px; }
+  .ticket .d-sec { margin-bottom: 8px; }
+  .ticket .d-title { font-size: 12px; padding: 7px 10px; padding-left: 14px; }
+  .ticket .d-sec .d-body-inner { padding: 0 10px 10px; }
+  .ticket .d-sec li { font-size: 12.5px; line-height: 1.6; margin-bottom: 4px; }
   .col.drop-hover { outline: 2px dashed var(--accent); outline-offset: -2px; background: var(--accent-soft); }
 
   /* BA 汇总视图 */
@@ -1010,6 +1019,13 @@ function ticketHTML(item) {
   if (nT) chips.push(`<span class="chip" style="background:#fff1e0;color:#f77234">讨论 ${nT}</span>`);
   if (linesOf(item.gapConclusion).length) chips.push(`<span class="chip" style="background:#f0eafe;color:#7a5af5">有 GAP 结论</span>`);
   if (linesOf(item.deliverables).length) chips.push(`<span class="chip" style="background:#eef1ff;color:#4b63ff">交付物 ${linesOf(item.deliverables).length}</span>`);
+  const tSec = (label, cls, arr, colorStyle="") => {
+    if (!arr.length) return "";
+    return `<details class="d-sec" open><summary class="d-title ${cls}" style="${colorStyle}">${label}<span class="count">（${arr.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner"><ol>${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div></details>`;
+  };
+  const secs = SECTIONS.map(s => tSec(s.label, s.cls, linesOf(item[s.key]))).join("") +
+               tSec("备注/风险", "", linesOf(item.remarks), "color:var(--text-soft)");
+  const hasSecs = secs.length > 0;
   return `<div class="ticket" draggable="true" data-id="${item.id}">
     <button class="icon-btn js-del t-del" title="删除">${TRASH_SVG}</button>
     <div class="t-name">${esc(item.name)}</div>
@@ -1019,6 +1035,7 @@ function ticketHTML(item) {
       ${item.owner ? `<span>${esc(item.owner)}</span>` : ""}
     </div>
     ${chips.length ? `<div class="t-meta" style="margin-top:8px">${chips.join("")}</div>` : ""}
+    ${hasSecs ? `<details class="t-secs" onclick="event.stopPropagation()"><summary class="t-toggle">▾ 展开详情</summary><div class="t-secs-body">${secs}</div></details>` : ""}
   </div>`;
 }
 
