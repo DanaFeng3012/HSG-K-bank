@@ -118,11 +118,21 @@
   .d-badges { display: flex; gap: 8px; }
   .d-meta { color: var(--text-soft); font-size: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
   .d-body { flex: 1; overflow-y: auto; padding: 18px 24px 24px; }
-  .d-sec { margin-bottom: 18px; }
-  .d-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; margin-bottom: 6px; }
+  .d-sec { margin-bottom: 14px; border-radius: 8px; background: #fff; border: 1px solid var(--border); overflow: hidden; }
+  .d-sec[open] { background: #fcfcfd; }
+  .d-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; letter-spacing: .03em;
+    padding: 10px 14px; cursor: pointer; user-select: none; list-style: none; position: relative; padding-left: 18px; }
+  .d-title::-webkit-details-marker { display: none; }
+  .d-title::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: currentColor; opacity: .85; border-radius: 4px 0 0 4px; }
+  .d-title .chev { margin-left: auto; font-size: 10px; opacity: .5; transition: transform .2s ease; color: var(--text-soft); }
+  .d-sec[open] .d-title .chev { transform: rotate(90deg); }
+  .d-title .count { font-weight: 600; opacity: .65; font-size: 12px; }
+  .d-sec .d-body-inner { padding: 0 14px 14px; }
   .d-sec ol { margin: 0; padding-left: 22px; }
   .d-sec li { font-size: 13.5px; line-height: 1.7; margin-bottom: 6px; white-space: pre-wrap; word-break: break-word; }
   .d-sec li::marker { color: var(--text-soft); font-weight: 700; font-size: 12px; }
+  .d-sec details.mins-card { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 6px; background: #fafbfd; }
+  .d-sec details.mins-card:last-child { margin-bottom: 0; }
   .drawer footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; background: #fafbfd; }
   .icon-btn { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent; color: var(--text-soft); cursor: pointer; opacity: 0; transition: all .15s ease; }
   tbody tr:hover .icon-btn { opacity: 1; }
@@ -1965,19 +1975,20 @@ function openModal(item) {
 /* ---- 只读详情抽屉（长文本按条完整展示） ---- */
 function openDetail(item) {
   if (!item) return;
-  const block = (label, cls, arr) => {
+  const block = (label, cls, arr, colorStyle = "") => {
     if (!arr.length) return "";
-    return `<div class="d-sec"><div class="d-title ${cls}">${label}（${arr.length}）</div><ol>${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>`;
+    const style = colorStyle || "";
+    return `<details class="d-sec" open><summary class="d-title ${cls}" style="${style}">${label}<span class="count">（${arr.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner"><ol>${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div></details>`;
   };
   const secs = SECTIONS.map(s => block(s.label, s.cls, linesOf(item[s.key]))).join("") +
-               block("备注/风险", "", linesOf(item.remarks));
+               block("备注/风险", "", linesOf(item.remarks), "color:var(--text-soft)");
   // changelog section
   const cl = (item.changelog || []);
-  const clSec = cl.length ? `<div class="d-sec"><div class="d-title" style="color:#8a5af5">📝 日期变更记录（${cl.length}）</div>
-    <ol>${cl.map(c => `<li><div style="font-size:12px;color:#8a92a3;margin-bottom:2px">${esc(c.time)} · ${esc(c.user)} · ${esc(c.mode || "")}</div><div>${esc(c.action)}</div></li>`).join("")}</ol></div>` : "";
+  const clSec = cl.length ? `<details class="d-sec" open><summary class="d-title" style="color:#8a5af5">📝 日期变更记录<span class="count">（${cl.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner">
+    <ol>${cl.map(c => `<li><div style="font-size:12px;color:#8a92a3;margin-bottom:2px">${esc(c.time)} · ${esc(c.user)} · ${esc(c.mode || "")}</div><div>${esc(c.action)}</div></li>`).join("")}</ol></div></details>` : "";
   // minutes section（原版纪要归档）
   const mins = (item.minutes || []).sort((a,b) => (b.time||"").localeCompare(a.time||""));
-  const minsSec = mins.length ? `<div class="d-sec"><div class="d-title" style="color:#1d8db5">📁 原版会议纪要（${mins.length} 份）</div>
+  const minsSec = mins.length ? `<details class="d-sec" open><summary class="d-title" style="color:#1d8db5">📁 原版会议纪要<span class="count">（${mins.length} 份）</span><span class="chev">▶</span></summary><div class="d-body-inner">
     ${mins.map(m => `<details style="margin-bottom:6px;background:#fafbfd;border:1px solid var(--border);border-radius:6px;padding:6px 10px">
       <summary style="cursor:pointer;font-weight:600;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:8px">
         <span>${esc(m.title || "未命名纪要")} <span style="color:var(--text-soft);font-weight:400;margin-left:8px">${esc(m.time||"")} · ${esc(m.user||"")}</span></span>
@@ -1985,7 +1996,7 @@ function openDetail(item) {
       </summary>
       <div style="margin-top:8px;font-size:12px;line-height:1.6;color:#333;white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:4px;padding:8px">${esc(m.content || "")}</div>
     </details>`).join("")}
-  </div>` : "";
+  </div></details>` : "";
   const p = prioOf(item.priority), st = statusOf(item.status);
   const overlay = document.createElement("div");
   overlay.className = "drawer-overlay";
