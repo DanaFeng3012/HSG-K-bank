@@ -1976,6 +1976,10 @@ function openModal(item) {
   });
   const close = () => overlay.remove();
   overlay.onclick = e => { if (e.target === overlay) close(); };
+  // 编辑模态框内的彩色可折叠区块：显式切换，避免原生 details 在部分场景失效
+  overlay.querySelectorAll(".d-sec > summary.d-title").forEach(sum => {
+    sum.onclick = e => { e.preventDefault(); sum.parentElement.open = !sum.parentElement.open; };
+  });
   overlay.querySelector("#m-cancel").onclick = close;
   overlay.querySelector("#m-save").onclick = () => {
     d.name = overlay.querySelector("#m-name").value.trim() || "未命名";
