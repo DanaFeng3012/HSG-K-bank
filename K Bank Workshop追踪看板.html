@@ -419,6 +419,7 @@ const CONFIG = {
     { key: "confirmed",     label: "确认点",       type: "items" },
     { key: "disputes",      label: "争议点",       type: "items" },
     { key: "discussions",   label: "讨论点",       type: "items" },
+    { key: "qa",            label: "问答环节",     type: "items" },
     { key: "gapConclusion", label: "最终差异需求结论（建议注明 GAP 编号与 FSD 章节）", type: "items" },
     { key: "nextStep",      label: "Next Step",    type: "items" },
     { key: "deliverables",  label: "交付物（含责任人与截止日更佳）", type: "items" },
@@ -984,11 +985,11 @@ const TRASH_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 const EYE_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12s3.6-6.5 10.5-6.5S22.5 12 22.5 12s-3.6 6.5-10.5 6.5S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg>`;
 
 function renderTable() {
-  $("#thead-row").innerHTML = CONFIG.columns.map(c => `<th>${c.label}</th>`).join("") + `<th class="col-actions">操作</th>`;
+  $("#thead-row").innerHTML = `<th class="col-actions">操作</th>` + CONFIG.columns.map(c => `<th>${c.label}</th>`).join("");
   $("#tbody").innerHTML = filtered().map(item =>
     `<tr data-id="${item.id}">` +
-    CONFIG.columns.map(c => `<td class="${[c.key === "name" ? "name" : "", c.long ? "longcell" : ""].filter(Boolean).join(" ")}">${cell(item, c)}</td>`).join("") +
     `<td class="col-actions"><button class="icon-btn js-detail-btn" title="查看详情">${EYE_SVG}</button><button class="icon-btn js-del" title="删除">${TRASH_SVG}</button></td>` +
+    CONFIG.columns.map(c => `<td class="${[c.key === "name" ? "name" : "", c.long ? "longcell" : ""].filter(Boolean).join(" ")}">${cell(item, c)}</td>`).join("") +
     `</tr>`
   ).join("");
   const find = el => items.find(i => i.id == el.closest("tr").dataset.id);
@@ -1900,13 +1901,19 @@ function addRow(list) {
 function itemListHTML(f, d) {
   const vals = linesOf(d[f.key]);
   const rows = (vals.length ? vals : [""]).map(itemRowHTML).join("");
-  return `<div class="field">
-      <label>${f.label}</label>
-      <div class="item-list" data-field="${f.key}">
-        ${rows}
-        <button type="button" class="add-item" data-field="${f.key}">+ 添加一条</button>
+  const sec = SECTIONS.find(s => s.key === f.key);
+  const cls = sec ? sec.cls : "";
+  const colorStyle = sec ? "" : "color:var(--text-soft)";
+  const n = vals.length;
+  return `<details class="d-sec" open style="margin-bottom:14px">
+      <summary class="d-title ${cls}" style="${colorStyle}">${f.label}<span class="count">（${n}）</span><span class="chev">▶</span></summary>
+      <div class="d-body-inner">
+        <div class="item-list" data-field="${f.key}">
+          ${rows}
+          <button type="button" class="add-item" data-field="${f.key}">+ 添加一条</button>
+        </div>
       </div>
-    </div>`;
+    </details>`;
 }
 
 function openModal(item) {
