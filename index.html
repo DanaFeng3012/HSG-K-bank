@@ -238,7 +238,10 @@
   .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
   .modal .sub { color: var(--text-soft); font-size: 13px; margin-bottom: 20px; }
   .field { margin-bottom: 14px; }
-  .field label { display: block; color: var(--text-soft); font-size: 13px; margin-bottom: 6px; }
+  .field label { display: block; color: var(--text-soft); font-size: 13px; margin-bottom: 6px; white-space: nowrap; line-height: 1.2; }
+  /* 模态框内 field 统一控件高度，保持同一水平线 */
+  .modal .field input, .modal .field select { height: 32px; box-sizing: border-box; }
+  .modal .field input[readonly] { background: #f4f5f7; color: var(--text-soft); cursor: not-allowed; }
   .field input, .field select { width: 100%; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .modal-actions { display: flex; align-items: center; gap: 8px; margin-top: 22px; position: sticky; bottom: -26px; background: var(--surface); padding: 12px 0 2px; }
@@ -1406,11 +1409,11 @@ function openTaskEdit(task) {
         </div>
       </div>
 
-      <!-- 字段网格：5 列 -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
-        <div class="field" style="margin:0"><label>来源模块 <span style="color:var(--text-soft);font-weight:400;font-size:11px">（可自由输入或从候选中选）</span></label><input id="te-source" list="te-source-list" placeholder="如：Foreign Exchange (EX) 外汇" value="${esc(currentSrcName)}" style="grid-column:span 2"><datalist id="te-source-list">${moduleDatalist}</datalist></div>
+      <!-- 字段网格：4 列自适应，label 统一不折行 -->
+      <div style="display:grid;grid-template-columns:4fr 1.2fr 1fr 1.4fr;gap:10px;margin-bottom:14px;align-items:start">
+        <div class="field" style="margin:0"><label>来源模块 <span title="可直接输入，也可从候选中选择已有模块或会议纪要提取的模块名" style="color:var(--text-soft);font-size:11px;cursor:help">ⓘ</span></label><input id="te-source" list="te-source-list" placeholder="如：Foreign Exchange (EX) 外汇" value="${esc(currentSrcName)}"><datalist id="te-source-list">${moduleDatalist}</datalist></div>
         <div class="field" style="margin:0"><label>责任方</label><select id="te-owner">${CONFIG.tasks.owners.map(o => `<option value="${o.key}" ${o.key === t.owner ? "selected" : ""}>${o.label}</option>`).join("")}</select></div>
-        <div class="field" style="margin:0"><label>任务编号（只读）</label><input id="te-code" readonly style="background:#f4f5f7;color:var(--text-soft);cursor:not-allowed" value="${esc(t.code || "（无）")}"></div>
+        <div class="field" style="margin:0"><label>任务编号 <span style="font-size:10.5px;color:var(--text-soft);font-weight:400">只读 🔒</span></label><input id="te-code" readonly value="${esc(t.code || "—")}"></div>
         <div class="field" style="margin:0"><label>截止日期</label><input id="te-due" type="date" value="${t.dueDate || ""}"></div>
       </div>
       <div style="font-size:11px;color:var(--text-soft);margin-bottom:14px">📅 创建时间：${esc(createdAt)} · 任务 ID：<code style="font-family:ui-monospace,monospace;font-size:10.5px">${esc(t.id)}</code></div>
