@@ -177,6 +177,12 @@
   .tboard-col-body { flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 80px; min-width: 0; overflow: hidden; }
   .tboard-col.empty { background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 10px, rgba(0,0,0,.02) 10px, rgba(0,0,0,.02) 20px); }
   .tboard-empty { padding: 16px 6px; font-size: 12px; color: var(--text-soft); text-align: center; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); }
+  /* 拖拽相关 */
+  .t-task[draggable="true"] { cursor: grab; }
+  .t-task.dragging { opacity: .35; transform: scale(.97); }
+  .tboard-col.drop-hover { border-color: var(--accent); background: rgba(75,99,255,.06); box-shadow: 0 0 0 2px rgba(75,99,255,.18); }
+  .tboard-col.drop-hover .tboard-empty { display: none; }
+  .tboard-col.drag-over-hint::after { content: "📥 拖放至此"; display:block; text-align:center; padding:10px; font-size:11px; color:var(--accent); font-weight:700; border:1.5px dashed var(--accent); border-radius:8px; margin-top:auto; }
   .t-task { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); padding: 8px 10px; background: #fff; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; min-width: 0; overflow: hidden; }
   .t-task:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.08); }
   .t-task.t-done { opacity: .55; text-decoration: line-through; }
@@ -1170,26 +1176,26 @@ function renderTasks() {
   if (taskBoardView === "status") {
     CONFIG.tasks.statuses.forEach(st => {
       const colTasks = active.filter(t => t.status === st.key);
-      colsHtml += renderTaskCol(st.label, st.text, st.color, colTasks, t => t.status === st.key, st.label);
+      colsHtml += renderTaskCol(st.label, st.text, st.color, colTasks, "status", st.key, st.label);
     });
   } else if (taskBoardView === "owner") {
     CONFIG.tasks.owners.forEach(ow => {
       const colTasks = active.filter(t => t.owner === ow.key);
-      colsHtml += renderTaskCol(ow.label, ow.text, ow.color, colTasks, t => t.owner === ow.key, ow.label);
+      colsHtml += renderTaskCol(ow.label, ow.text, ow.color, colTasks, "owner", ow.key, ow.label);
     });
     // 未识别
     const unrec = active.filter(t => !CONFIG.tasks.owners.find(o => o.key === t.owner));
-    if (unrec.length) colsHtml += renderTaskCol("未识别", "#8a92a3", "#f4f5f7", unrec, () => true, "未识别");
+    if (unrec.length) colsHtml += renderTaskCol("未识别", "#8a92a3", "#f4f5f7", unrec, "owner", "_unrec", "未识别");
   } else {
-    // 按模块分组
+    // 按模块分组 — 需要传数字 item.id 作为 colKey
     const moduleMap = {};
     active.forEach(t => {
-      const key = t.sourceItemId || "_orphan";
+      const key = t.sourceItemId ? String(t.sourceItemId) : "_orphan";
       if (!moduleMap[key]) moduleMap[key] = { name: t.sourceItemName || "（未关联模块）", tasks: [] };
       moduleMap[key].tasks.push(t);
     });
-    Object.values(moduleMap).sort((a,b) => b.tasks.length - a.tasks.length).forEach(m => {
-      colsHtml += renderTaskCol(m.name, "#4b63ff", "#eef2ff", m.tasks, () => true, m.name);
+    Object.entries(moduleMap).sort((a,b) => b[1].tasks.length - a[1].tasks.length).forEach(([k, m]) => {
+      colsHtml += renderTaskCol(m.name, "#4b63ff", "#eef2ff", m.tasks, "module", k, m.name);
     });
     if (!Object.keys(moduleMap).length) colsHtml += `<div style="padding:30px;text-align:center;color:var(--text-soft);border:1.5px dashed var(--border);border-radius:8px">暂无任务</div>`;
   }
@@ -1214,13 +1220,89 @@ function renderTasks() {
     }
   };
   $("#btn-task-new").onclick = () => openTaskEdit(null);
-  host.querySelectorAll(".t-task").forEach(el => {
-    el.onclick = () => openTaskEdit(tasks.find(t => t.id === el.dataset.id));
+
+  // ===== 拖拽绑定 =====
+  let dragTaskId = null;
+  let dragMovedFlag = false;
+  host.querySelectorAll(".t-task").forEach(card => {
+    card.addEventListener("dragstart", e => {
+      dragTaskId = card.dataset.id;
+      dragMovedFlag = false;
+      card.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      try { e.dataTransfer.setData("text/plain", dragTaskId); } catch(_) {}
+    });
+    card.addEventListener("drag", () => { dragMovedFlag = true; });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("dragging");
+      host.querySelectorAll(".tboard-col").forEach(c => c.classList.remove("drop-hover"));
+      // 200ms 内屏蔽 click，防止 drop 后误触发打开模态框
+      if (dragMovedFlag) {
+        window._taskJustDropped = true;
+        setTimeout(() => { window._taskJustDropped = false; }, 200);
+      }
+    });
+    card.onclick = () => {
+      if (window._taskJustDropped) return;
+      openTaskEdit(tasks.find(t => t.id === card.dataset.id));
+    };
+  });
+  host.querySelectorAll(".tboard-col").forEach(col => {
+    col.addEventListener("dragover", e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      col.classList.add("drop-hover");
+    });
+    col.addEventListener("dragleave", e => {
+      // 只有真正离开 col 才清除（进入子元素不算）
+      if (e.currentTarget === col) col.classList.remove("drop-hover");
+    });
+    col.addEventListener("drop", async e => {
+      e.preventDefault();
+      col.classList.remove("drop-hover");
+      const view = col.dataset.colView;   // "status" | "owner" | "module"
+      const key  = col.dataset.colKey;     // 目标列 key
+      if (!dragTaskId) return;
+      const updated = [...tasks];
+      const idx = updated.findIndex(t => t.id === dragTaskId);
+      if (idx < 0) return;
+      const t = { ...updated[idx] };
+      let changed = false;
+      let changeSummary = "";
+      if (view === "status") {
+        const old = t.status; t.status = key; changed = old !== key;
+        const label = (CONFIG.tasks.statuses.find(s => s.key === key) || {}).label || key;
+        changeSummary = `📌 状态 → ${label}`;
+      } else if (view === "owner") {
+        const old = t.owner; t.owner = key; changed = old !== key;
+        const label = key === "_unrec" ? "未识别" : (CONFIG.tasks.owners.find(o => o.key === key) || {}).label || key;
+        changeSummary = `👤 责任方 → ${label}`;
+      } else if (view === "module") {
+        const oldId = t.sourceItemId, oldName = t.sourceItemName;
+        if (key === "_orphan") {
+          t.sourceItemId = ""; t.sourceItemName = "（未关联模块）";
+        } else {
+          const item = items.find(i => String(i.id) === key);
+          t.sourceItemId = item ? item.id : key;
+          t.sourceItemName = item ? item.name : col.dataset.label || key;
+        }
+        changed = String(oldId) !== String(t.sourceItemId) || (oldName || "") !== (t.sourceItemName || "");
+        changeSummary = `📂 模块 → ${t.sourceItemName}`;
+      }
+      if (changed) {
+        updated[idx] = t;
+        await writeTasksToFirebase(updated);
+        showToast(`✅ ${changeSummary}`);
+      } else {
+        showToast("ℹ️ 已在该列");
+      }
+      dragTaskId = null;
+    });
   });
 }
 
-// 辅助：渲染一列（通用）
-function renderTaskCol(label, color, bgColor, colTasks, filterFn, emptyName) {
+// 辅助：渲染一列（通用）+ 拖拽支持
+function renderTaskCol(label, color, bgColor, colTasks, viewType, colKey, emptyName) {
   const isEmpty = colTasks.length === 0;
   let cardsHtml = "";
   if (!isEmpty) {
@@ -1232,7 +1314,7 @@ function renderTaskCol(label, color, bgColor, colTasks, filterFn, emptyName) {
       const enLine = descLines.find((l, i) => i > 0 && /^\s{0,2}[A-Za-z]/.test(l)) || "";
       const dueCls = overdueCheck(t.dueDate);
       const doneCls = t.status === "done" ? "t-done" : "";
-      cardsHtml = cardsHtml + `<div class="t-task ${doneCls}" style="border-left-color:${color}" data-id="${t.id}">
+      cardsHtml = cardsHtml + `<div class="t-task ${doneCls}" draggable="true" style="border-left-color:${color}" data-id="${t.id}">
         <div class="t-row1">
           <span class="t-owner" style="background:${ow.color};color:${ow.text}">${esc(ow.label)}</span>
           ${t.code ? `<span class="t-code">${esc(t.code)}</span>` : ""}
@@ -1248,14 +1330,14 @@ function renderTaskCol(label, color, bgColor, colTasks, filterFn, emptyName) {
       </div>`;
     });
   }
-  return `<div class="tboard-col ${isEmpty ? "empty" : ""}" data-label="${label}">
+  return `<div class="tboard-col ${isEmpty ? "empty" : ""}" data-label="${esc(label)}" data-col-view="${viewType}" data-col-key="${esc(String(colKey))}">
     <div class="tboard-col-head">
       <div class="tboard-col-title" style="color:${color}">
         <span class="tboard-col-dot" style="background:${color}"></span>${esc(label)}
       </div>
       <div class="tboard-col-count" style="background:${bgColor};color:${color}">${colTasks.length}</div>
     </div>
-    <div class="tboard-col-body">${isEmpty ? `<div class="tboard-empty">暂无${emptyName}的任务</div>` : cardsHtml}</div>
+    <div class="tboard-col-body">${isEmpty ? `<div class="tboard-empty">拖放任务至此 · 暂无${emptyName}的任务</div>` : cardsHtml}</div>
   </div>`;
 }
 
@@ -1276,7 +1358,27 @@ function openTaskEdit(task) {
   let en = lines.slice(1).join("\n").trim();
   if (/^[A-Za-z]/.test(zh.trim()) && lines.length >= 2) { zh = lines[1] || zh; en = lines[0]; }
 
-  const sources = items.filter(i => (i.nextStep || []).length).map(i => `<option value="${i.id}" ${i.id === t.sourceItemId ? "selected" : ""}>${esc(i.name)}</option>`).join("");
+  // 候选模块 = 所有已有模块 + 从会议纪要自动提取的模块名（去重）
+  const existingMods = items.map(i => i.name).filter(Boolean);
+  const extractedFromMinutes = [];
+  items.forEach(it => {
+    (it.minutes || []).forEach(m => {
+      const txt = (m.content || "") + "\n" + (m.title || "");
+      // 匹配常见模块名模式：Module XXX、模块 XXX、Session XXX、Topic: XXX、或 "单词+缩写" (如 Foreign Exchange (EX))
+      const pats = [
+        /(?:Module|模块|Session|Topic)[:::\s]+([A-Za-z\u4e00-\u9fff][^\n:：]{2,60})/gi,
+        /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\s*\(([A-Z]{2,6})\)/g,
+        /([A-Z][a-zA-Z&]{3,}(?:\s+[A-Z][a-zA-Z&]{2,}){1,4})(?=\s*(?:—|—|:|：|模块|业务|业务域|domain))/g,
+      ];
+      pats.forEach(re => { let m; while ((m = re.exec(txt)) !== null) extractedFromMinutes.push(m[1].trim()); });
+    });
+  });
+  const allCandidates = [...new Set([...existingMods, ...extractedFromMinutes.filter(n => n.length >= 3 && n.length <= 80)])].sort((a,b) => a.localeCompare(b));
+  const moduleDatalist = allCandidates.map(n => {
+    const item = items.find(i => i.name === n);
+    return `<option value="${esc(n)}" data-module-id="${item ? item.id : ""}">`;
+  }).join("");
+  const currentSrcName = t.sourceItemName ? String(t.sourceItemName) : "";
   const createdAt = t.createdAt ? new Date(t.createdAt).toLocaleString() : new Date().toLocaleString();
 
   const ov = document.createElement("div");
@@ -1306,7 +1408,7 @@ function openTaskEdit(task) {
 
       <!-- 字段网格：5 列 -->
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
-        <div class="field" style="margin:0"><label>来源模块</label><select id="te-source" style="grid-column:span 2"><option value="">（手动创建）</option>${sources}</select></div>
+        <div class="field" style="margin:0"><label>来源模块 <span style="color:var(--text-soft);font-weight:400;font-size:11px">（可自由输入或从候选中选）</span></label><input id="te-source" list="te-source-list" placeholder="如：Foreign Exchange (EX) 外汇" value="${esc(currentSrcName)}" style="grid-column:span 2"><datalist id="te-source-list">${moduleDatalist}</datalist></div>
         <div class="field" style="margin:0"><label>责任方</label><select id="te-owner">${CONFIG.tasks.owners.map(o => `<option value="${o.key}" ${o.key === t.owner ? "selected" : ""}>${o.label}</option>`).join("")}</select></div>
         <div class="field" style="margin:0"><label>任务编号（只读）</label><input id="te-code" readonly style="background:#f4f5f7;color:var(--text-soft);cursor:not-allowed" value="${esc(t.code || "（无）")}"></div>
         <div class="field" style="margin:0"><label>截止日期</label><input id="te-due" type="date" value="${t.dueDate || ""}"></div>
@@ -1366,8 +1468,13 @@ function openTaskEdit(task) {
     const status = chosenStatus;
     const dueDate = ov.querySelector("#te-due").value;
     const remark = ov.querySelector("#te-remark").value.trim();
-    const srcId = parseInt(ov.querySelector("#te-source").value) || "";
-    const srcName = srcId ? (items.find(i => i.id === srcId) || {}).name || "" : "";
+    const srcInput = (ov.querySelector("#te-source").value || "").trim();
+    let srcId = "", srcName = "";
+    if (srcInput) {
+      const matched = items.find(i => i.name === srcInput);
+      if (matched) { srcId = matched.id; srcName = matched.name; }
+      else { srcName = srcInput; }
+    }
     if (!zhT && !enT) { showToast("❌ 任务描述不能为空"); return; }
     const description = enT ? `${zhT}\n  ${enT}` : zhT;
 
