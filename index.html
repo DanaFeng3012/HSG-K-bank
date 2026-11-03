@@ -1295,6 +1295,7 @@ function renderTasks() {
       if (changed) {
         updated[idx] = t;
         await writeTasksToFirebase(updated);
+        renderTasks();  // 立即重绘，卡片才会真的跳到新列
         showToast(`✅ ${changeSummary}`);
       } else {
         showToast("ℹ️ 已在该列");
