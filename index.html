@@ -165,7 +165,8 @@
   .ticket .d-sec li { font-size: 12.5px; line-height: 1.6; margin-bottom: 4px; }
   /* 任务看板 */
   /* 任务看板 · 状态分列（标准 Kanban 风格） */
-  .tboard-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  #view-tasks { width: 100%; box-sizing: border-box; margin: 0; padding: 0; }
+  .tboard-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; box-sizing: border-box; margin: 0; padding: 0; }
   @media (max-width: 1100px) { .tboard-cols { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 620px)  { .tboard-cols { grid-template-columns: 1fr; } }
   .tboard-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; min-height: 200px; display: flex; flex-direction: column; }
@@ -338,7 +339,7 @@
 
   <div class="card hidden" id="view-gantt"><div class="gantt-legend" id="gantt-legend"></div><div id="gantt-host"></div></div>
   <div class="board hidden" id="view-board"></div>
-  <div class="board hidden" id="view-tasks"></div>
+  <div class="hidden" id="view-tasks"></div>
   <div id="view-minutes" class="hidden" style="max-width:100%"></div>
   <div id="view-summary" class="hidden" style="max-width:100%"></div>
 </div>
