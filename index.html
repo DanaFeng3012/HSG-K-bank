@@ -1127,72 +1127,77 @@ function overdueCheck(due) {
   return d < today ? "overdue" : "";
 }
 
-// 渲染任务看板：按 owner 分列，每列内按 status 分泳道
+// 任务看板：子 tab（状态 / 责任方 / 模块）切换渲染
+let taskBoardView = localStorage.getItem("kbank-task-view") || "status";
+
 function renderTasks() {
   const host = $("#view-tasks");
   const active = tasks.filter(t => !t.archived);
 
-  // 头部：统计条
+  // 统计
   const counts = { created: active.length, todo: 0, doing: 0, done: 0, blocked: 0 };
   active.forEach(t => counts[t.status] = (counts[t.status] || 0) + 1);
-  const ownerCounts = {};
-  active.forEach(t => ownerCounts[t.owner] = (ownerCounts[t.owner] || 0) + 1);
+
+  // 子 tab
+  const subTabs = [
+    { key: "status", label: "任务状态" },
+    { key: "owner",  label: "责任方" },
+    { key: "module", label: "模块" },
+  ];
+  const subTabHtml = `<div style="display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:0">
+    ${subTabs.map(s => `<button class="btn ghost t-subtab ${taskBoardView===s.key?"t-subtab-on":""}" data-sub="${s.key}" style="padding:8px 18px;border-radius:6px 6px 0 0;font-size:13px;font-weight:600;border-bottom:2px solid ${taskBoardView===s.key?"var(--accent)":"transparent"};color:${taskBoardView===s.key?"var(--accent)":"var(--text-soft)"};background:${taskBoardView===s.key?"rgba(75,99,255,.06)":"transparent"}">${s.label}</button>`).join("")}
+  </div>`;
+
+  // 头部
   const header = `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap">
       <div style="font-size:12.5px;color:var(--text-soft)">
-        共 <b style="color:var(--text)">${counts.created}</b> 个任务 ·
-        ${CONFIG.tasks.owners.filter(o => ownerCounts[o.key]).map(o => `<span class="t-owner" style="background:${o.color};color:${o.text}">${o.label} ${ownerCounts[o.key] || 0}</span>`).join("")}
+        共 <b style="color:var(--text)">${counts.created}</b> 个任务
       </div>
       <div class="spacer" style="flex:1"></div>
       <button class="btn ghost" id="btn-task-sync">🔄 从模块同步</button>
-      <button class="btn" id="btn-task-new">+ 新建任务</button>
+      <button class="btn" id="btn-task-new">➕ 新建任务</button>
     </div>`;
 
-  // 状态分列（始终显示 4 列，空列也留占位）
-  let html = `<div class="tboard-cols">`;
-  CONFIG.tasks.statuses.forEach(st => {
-    const colTasks = active.filter(t => t.status === st.key);
-    const isEmpty = colTasks.length === 0;
-    html += `<div class="tboard-col ${isEmpty ? "empty" : ""}" data-status="${st.key}">
-      <div class="tboard-col-head">
-        <div class="tboard-col-title" style="color:${st.text}">
-          <span class="tboard-col-dot" style="background:${st.text}"></span>${st.label}
-        </div>
-        <div class="tboard-col-count" style="background:${st.color};color:${st.text}">${colTasks.length}</div>
-      </div>
-      <div class="tboard-col-body">`;
-    if (isEmpty) {
-      html += `<div class="tboard-empty">暂无${st.label}的任务</div>`;
-    } else {
-      colTasks.forEach(t => {
-        const ow = ownerOpt(t.owner);
-        const descLines = (t.description || "").split("\n");
-        const zhLine = descLines.find(l => l.trim() && !/^\s*[A-Za-z]/.test(l)) || descLines[0] || "";
-        const enLine = descLines.find((l, i) => i > 0 && /^\s{0,2}[A-Za-z]/.test(l)) || "";
-        const dueCls = overdueCheck(t.dueDate);
-        const doneCls = t.status === "done" ? "t-done" : "";
-        const borderColor = st.text;
-        html += `<div class="t-task ${doneCls}" style="border-left-color:${borderColor}" data-id="${t.id}">
-          <div class="t-row1">
-            <span class="t-owner" style="background:${ow.color};color:${ow.text}">${esc(ow.label)}</span>
-            ${t.code ? `<span class="t-code">${esc(t.code)}</span>` : ""}
-            <span class="t-src">${esc(t.sourceItemName || "—")}</span>
-          </div>
-          <div class="t-title">${esc(zhLine.slice(0, 120))}</div>
-          ${enLine ? `<div class="t-title-en">${esc(enLine.trim().slice(0, 120))}</div>` : ""}
-          <div class="t-foot">
-            ${t.dueDate ? `<span class="t-due ${dueCls}">⏳ ${t.dueDate}</span>` : `<span></span>`}
-            ${t.remark ? `<span class="t-remark-dot" title="有备注">🗒</span>` : `<span></span>`}
-          </div>
-        </div>`;
-      });
-    }
-    html += `</div></div>`;
-  });
-  html += `</div>`;
-  host.innerHTML = header + html;
+  // 根据当前 view 生成列
+  let colsHtml = "";
+  if (taskBoardView === "status") {
+    CONFIG.tasks.statuses.forEach(st => {
+      const colTasks = active.filter(t => t.status === st.key);
+      colsHtml += renderTaskCol(st.label, st.text, st.color, colTasks, t => t.status === st.key, st.label);
+    });
+  } else if (taskBoardView === "owner") {
+    CONFIG.tasks.owners.forEach(ow => {
+      const colTasks = active.filter(t => t.owner === ow.key);
+      colsHtml += renderTaskCol(ow.label, ow.text, ow.color, colTasks, t => t.owner === ow.key, ow.label);
+    });
+    // 未识别
+    const unrec = active.filter(t => !CONFIG.tasks.owners.find(o => o.key === t.owner));
+    if (unrec.length) colsHtml += renderTaskCol("未识别", "#8a92a3", "#f4f5f7", unrec, () => true, "未识别");
+  } else {
+    // 按模块分组
+    const moduleMap = {};
+    active.forEach(t => {
+      const key = t.sourceItemId || "_orphan";
+      if (!moduleMap[key]) moduleMap[key] = { name: t.sourceItemName || "（未关联模块）", tasks: [] };
+      moduleMap[key].tasks.push(t);
+    });
+    Object.values(moduleMap).sort((a,b) => b.tasks.length - a.tasks.length).forEach(m => {
+      colsHtml += renderTaskCol(m.name, "#4b63ff", "#eef2ff", m.tasks, () => true, m.name);
+    });
+    if (!Object.keys(moduleMap).length) colsHtml += `<div style="padding:30px;text-align:center;color:var(--text-soft);border:1.5px dashed var(--border);border-radius:8px">暂无任务</div>`;
+  }
 
-  // 绑定事件
+  host.innerHTML = header + subTabHtml + `<div class="tboard-cols">${colsHtml}</div>`;
+
+  // 子 tab 切换
+  host.querySelectorAll(".t-subtab").forEach(btn => {
+    btn.onclick = () => {
+      taskBoardView = btn.dataset.sub;
+      localStorage.setItem("kbank-task-view", taskBoardView);
+      renderTasks();
+    };
+  });
   $("#btn-task-sync").onclick = async () => {
     showToast("🔄 正在从模块同步任务…");
     try {
@@ -1208,7 +1213,47 @@ function renderTasks() {
   });
 }
 
-// 任务详情 / 编辑模态框（Linear/Asana 风格）
+// 辅助：渲染一列（通用）
+function renderTaskCol(label, color, bgColor, colTasks, filterFn, emptyName) {
+  const isEmpty = colTasks.length === 0;
+  let cardsHtml = "";
+  if (!isEmpty) {
+    colTasks.forEach(t => {
+      const ow = ownerOpt(t.owner);
+      const st = statusOpt(t.status);
+      const descLines = (t.description || "").split("\n");
+      const zhLine = descLines.find(l => l.trim() && !/^\s*[A-Za-z]/.test(l)) || descLines[0] || "";
+      const enLine = descLines.find((l, i) => i > 0 && /^\s{0,2}[A-Za-z]/.test(l)) || "";
+      const dueCls = overdueCheck(t.dueDate);
+      const doneCls = t.status === "done" ? "t-done" : "";
+      cardsHtml = cardsHtml + `<div class="t-task ${doneCls}" style="border-left-color:${color}" data-id="${t.id}">
+        <div class="t-row1">
+          <span class="t-owner" style="background:${ow.color};color:${ow.text}">${esc(ow.label)}</span>
+          ${t.code ? `<span class="t-code">${esc(t.code)}</span>` : ""}
+          <span class="t-src">${esc(t.sourceItemName || "—")}</span>
+        </div>
+        <div class="t-title">${esc(zhLine.slice(0, 140))}</div>
+        ${enLine ? `<div class="t-title-en">${esc(enLine.trim().slice(0, 140))}</div>` : ""}
+        <div class="t-foot">
+          <span style="font-size:10px;color:${st.text};background:${st.color};padding:1px 6px;border-radius:4px;font-weight:600">${st.label}</span>
+          ${t.dueDate ? `<span class="t-due ${dueCls}">⏳ ${t.dueDate}</span>` : `<span></span>`}
+          ${t.remark ? `<span class="t-remark-dot" title="有备注">🗒</span>` : `<span></span>`}
+        </div>
+      </div>`;
+    });
+  }
+  return `<div class="tboard-col ${isEmpty ? "empty" : ""}" data-label="${label}">
+    <div class="tboard-col-head">
+      <div class="tboard-col-title" style="color:${color}">
+        <span class="tboard-col-dot" style="background:${color}"></span>${esc(label)}
+      </div>
+      <div class="tboard-col-count" style="background:${bgColor};color:${color}">${colTasks.length}</div>
+    </div>
+    <div class="tboard-col-body">${isEmpty ? `<div class="tboard-empty">暂无${emptyName}的任务</div>` : cardsHtml}</div>
+  </div>`;
+}
+
+// 任务详情 / 编辑模态框：取消 / 删除 / 保存 三按钮
 function openTaskEdit(task) {
   const isNew = !task;
   const t = task || {
@@ -1223,27 +1268,25 @@ function openTaskEdit(task) {
   const lines = fullDesc.split("\n");
   let zh = lines[0] || "";
   let en = lines.slice(1).join("\n").trim();
-  // 如果第一行看起来就是英文，尝试重新切
-  if (/^[A-Za-z]/.test(zh.trim()) && lines.length >= 2) {
-    zh = lines[1] || zh; en = lines[0];
-  }
+  if (/^[A-Za-z]/.test(zh.trim()) && lines.length >= 2) { zh = lines[1] || zh; en = lines[0]; }
 
   const sources = items.filter(i => (i.nextStep || []).length).map(i => `<option value="${i.id}" ${i.id === t.sourceItemId ? "selected" : ""}>${esc(i.name)}</option>`).join("");
+  const createdAt = t.createdAt ? new Date(t.createdAt).toLocaleString() : new Date().toLocaleString();
 
   const ov = document.createElement("div");
   ov.className = "modal-overlay";
   ov.innerHTML = `
-  <div class="modal" style="max-width:720px">
+  <div class="modal" style="max-width:760px">
     <div class="modal-head">
       <div style="display:flex;align-items:center;gap:10px">
         <span class="tboard-col-dot" style="background:${st.text};width:12px;height:12px;border-radius:50%;display:inline-block"></span>
-        <h3 style="margin:0">${isNew ? "➕ 新建任务" : (t.code ? `${esc(t.code)} · ` : "")}${esc(t.sourceItemName || "未命名任务")}</h3>
+        <h3 style="margin:0;font-size:16px">${isNew ? "➕ 新建任务" : (t.code ? `<span style="color:${st.text}">${esc(t.code)}</span> · ` : "")}<b style="font-weight:700">${esc(t.sourceItemName || "未命名任务")}</b></h3>
       </div>
       <button class="icon-btn" id="m-close">✕</button>
     </div>
     <div class="modal-body" style="max-height:72vh;overflow-y:auto;padding:22px 24px">
 
-      <!-- 状态一键切换按钮组 -->
+      <!-- 状态按钮组 -->
       <div style="margin-bottom:18px">
         <div style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">任务状态</div>
         <div id="te-status-group" style="display:flex;gap:6px;flex-wrap:wrap">
@@ -1255,58 +1298,50 @@ function openTaskEdit(task) {
         </div>
       </div>
 
-      <!-- 四栏网格：来源模块 / 责任方 / 编号 / 截止日期 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div class="field" style="margin:0"><label>来源模块</label><select id="te-source"><option value="">（手动创建）</option>${sources}</select></div>
+      <!-- 字段网格：5 列 -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+        <div class="field" style="margin:0"><label>来源模块</label><select id="te-source" style="grid-column:span 2"><option value="">（手动创建）</option>${sources}</select></div>
         <div class="field" style="margin:0"><label>责任方</label><select id="te-owner">${CONFIG.tasks.owners.map(o => `<option value="${o.key}" ${o.key === t.owner ? "selected" : ""}>${o.label}</option>`).join("")}</select></div>
-        <div class="field" style="margin:0"><label>任务编号</label><input id="te-code" placeholder="如 A1 / B2 / C3" value="${esc(t.code)}"></div>
+        <div class="field" style="margin:0"><label>任务编号（只读）</label><input id="te-code" readonly style="background:#f4f5f7;color:var(--text-soft);cursor:not-allowed" value="${esc(t.code || "（无）")}"></div>
         <div class="field" style="margin:0"><label>截止日期</label><input id="te-due" type="date" value="${t.dueDate || ""}"></div>
       </div>
+      <div style="font-size:11px;color:var(--text-soft);margin-bottom:14px">📅 创建时间：${esc(createdAt)} · 任务 ID：<code style="font-family:ui-monospace,monospace;font-size:10.5px">${esc(t.id)}</code></div>
 
       <!-- 双语描述 -->
-      <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">任务描述（双语）</div>
-        <div style="margin-bottom:10px">
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">任务描述</div>
+        <div style="margin-bottom:8px">
           <label style="font-size:11px;color:var(--text-soft);margin-bottom:4px;display:block">🇨🇳 中文</label>
-          <textarea id="te-zh" rows="3" placeholder="任务完整描述（中文）" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical">${esc(zh.trim())}</textarea>
+          <textarea id="te-zh" rows="4" placeholder="任务完整描述（中文）" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical">${esc(zh.trim())}</textarea>
         </div>
         <div>
           <label style="font-size:11px;color:var(--text-soft);margin-bottom:4px;display:block">🇬🇧 English</label>
-          <textarea id="te-en" rows="3" placeholder="Full task description (English)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical">${esc(en.trim())}</textarea>
+          <textarea id="te-en" rows="4" placeholder="Full task description (English)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical">${esc(en.trim())}</textarea>
         </div>
       </div>
 
       <!-- 备注 -->
-      <div style="margin-bottom:16px">
+      <div style="margin-bottom:4px">
         <div style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">备注 / 进度 / 阻塞项</div>
         <textarea id="te-remark" rows="3" placeholder="补充说明、当前进度、需要协调的问题…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical">${esc(t.remark || "")}</textarea>
       </div>
-
-      <!-- 元信息 -->
-      <div style="font-size:11.5px;color:var(--text-soft);padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-        <div>
-          ${t.createdAt ? `创建于 ${new Date(t.createdAt).toLocaleString()}` : "新建任务"}
-          ${!isNew ? ` · ID ${t.id.slice(0, 10)}` : ""}
-        </div>
-        ${!isNew ? `<button type="button" id="te-archive" style="background:none;border:none;color:#f53f3f;font-size:11.5px;cursor:pointer;font-weight:600">📦 归档此任务</button>` : ""}
-      </div>
     </div>
-    <div class="modal-foot">
+    <div class="modal-foot" style="border-top:1px solid var(--border);padding:14px 24px">
+      ${!isNew ? `<button class="btn ghost danger" id="te-delete" style="color:#f53f3f;border-color:#fde2e2;background:#fef2f2">🗑 删除</button>` : ""}
       <div class="spacer"></div>
       <button class="btn ghost" id="te-cancel">取消</button>
-      <button class="btn" id="te-save">保存</button>
+      <button class="btn" id="te-save" style="background:var(--accent);border-color:var(--accent);color:#fff">💾 保存</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
 
-  // 状态按钮组绑定
+  // 状态按钮组
   let chosenStatus = t.status;
   ov.querySelectorAll("#te-status-group button").forEach(btn => {
     btn.onclick = () => {
       chosenStatus = btn.dataset.status;
       ov.querySelectorAll("#te-status-group button").forEach(b => {
-        const s = b.dataset.status;
-        const so = statusOpt(s);
+        const s = b.dataset.status; const so = statusOpt(s);
         b.style.borderColor = s === chosenStatus ? so.text : "var(--border)";
         b.style.background = s === chosenStatus ? so.color : "transparent";
         b.style.color = s === chosenStatus ? so.text : "var(--text)";
@@ -1320,7 +1355,6 @@ function openTaskEdit(task) {
 
   ov.querySelector("#te-save").onclick = async () => {
     const owner = ov.querySelector("#te-owner").value;
-    const code = ov.querySelector("#te-code").value.trim();
     const zhT = ov.querySelector("#te-zh").value.trim();
     const enT = ov.querySelector("#te-en").value.trim();
     const status = chosenStatus;
@@ -1328,38 +1362,33 @@ function openTaskEdit(task) {
     const remark = ov.querySelector("#te-remark").value.trim();
     const srcId = parseInt(ov.querySelector("#te-source").value) || "";
     const srcName = srcId ? (items.find(i => i.id === srcId) || {}).name || "" : "";
-
     if (!zhT && !enT) { showToast("❌ 任务描述不能为空"); return; }
-
-    // 组装双语描述（中文 + 英文缩进）
     const description = enT ? `${zhT}\n  ${enT}` : zhT;
 
     const updated = [...tasks];
     if (isNew) {
       updated.push({
         id: t.id, sourceItemId: srcId, sourceItemName: srcName,
-        owner, code, description, status, dueDate, createdAt: new Date().toISOString(), remark, archived: false,
-        hash: t.hash,
+        owner, code: t.code || "", description, status, dueDate,
+        createdAt: new Date().toISOString(), remark, archived: false, hash: t.hash,
       });
     } else {
       const idx = updated.findIndex(x => x.id === t.id);
-      if (idx >= 0) {
-        updated[idx] = { ...updated[idx], owner, code, description, status, dueDate, remark, sourceItemId: srcId, sourceItemName: srcName };
-      }
+      if (idx >= 0) updated[idx] = { ...updated[idx], owner, description, status, dueDate, remark, sourceItemId: srcId, sourceItemName: srcName };
     }
     await writeTasksToFirebase(updated);
     ov.remove();
     showToast(isNew ? "✅ 已新建任务" : "✅ 任务已保存");
   };
 
-  const delBtn = ov.querySelector("#te-archive");
+  const delBtn = ov.querySelector("#te-delete");
   if (delBtn) {
     delBtn.onclick = async () => {
-      if (!confirm("确认归档此任务？（不会真删，仍可通过'从模块同步'恢复）")) return;
-      const updated = tasks.map(x => x.id === t.id ? { ...x, archived: true } : x);
+      if (!confirm(`确认删除任务 ${t.code || ""} ${t.sourceItemName || ""}？此操作不可恢复。`)) return;
+      const updated = tasks.filter(x => x.id !== t.id);
       await writeTasksToFirebase(updated);
       ov.remove();
-      showToast("📦 已归档");
+      showToast("🗑 任务已删除");
     };
   }
 }
@@ -1448,7 +1477,7 @@ function ticketHTML(item) {
   if (linesOf(item.deliverables).length) chips.push(`<span class="chip" style="background:#eef1ff;color:#4b63ff">交付物 ${linesOf(item.deliverables).length}</span>`);
   const tSec = (label, cls, arr, colorStyle="") => {
     if (!arr.length) return "";
-    return `<details class="d-sec" open><summary class="d-title ${cls}" style="${colorStyle}">${label}<span class="count">（${arr.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner"><ol>${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div></details>`;
+    return `<details class="d-sec"><summary class="d-title ${cls}" style="${colorStyle}">${label}<span class="count">（${arr.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner"><ol>${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div></details>`;
   };
   const secs = SECTIONS.map(s => tSec(s.label, s.cls, linesOf(item[s.key]))).join("") +
                tSec("备注/风险", "", linesOf(item.remarks), "color:var(--text-soft)");
@@ -1495,6 +1524,8 @@ function render() {
   $("#view-tasks").classList.toggle("hidden", currentView !== "tasks");
   $("#view-minutes").classList.toggle("hidden", currentView !== "minutes");
   $("#view-summary").classList.toggle("hidden", currentView !== "summary");
+  // 任务看板视角下隐藏顶部「新建条目」按钮（该视角有专属的「新建任务」按钮）
+  $("#btn-new").style.display = (currentView === "tasks") ? "none" : "";
   if (currentView === "table") renderTable();
   else if (currentView === "gantt") renderGantt();
   else if (currentView === "board") renderBoard();
@@ -2333,7 +2364,7 @@ function itemListHTML(f, d) {
   const cls = sec ? sec.cls : "";
   const colorStyle = sec ? "" : "color:var(--text-soft)";
   const n = vals.length;
-  return `<details class="d-sec" open style="margin-bottom:14px">
+  return `<details class="d-sec" style="margin-bottom:14px">
       <summary class="d-title ${cls}" style="${colorStyle}">${f.label}<span class="count">（${n}）</span><span class="chev">▶</span></summary>
       <div class="d-body-inner">
         <div class="item-list" data-field="${f.key}">
@@ -2434,17 +2465,17 @@ function openDetail(item) {
   const block = (label, cls, arr, colorStyle = "") => {
     if (!arr.length) return "";
     const style = colorStyle || "";
-    return `<details class="d-sec" open><summary class="d-title ${cls}" style="${style}">${label}<span class="count">（${arr.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner"><ol>${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div></details>`;
+    return `<details class="d-sec"><summary class="d-title ${cls}" style="${style}">${label}<span class="count">（${arr.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner"><ol>${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div></details>`;
   };
   const secs = SECTIONS.map(s => block(s.label, s.cls, linesOf(item[s.key]))).join("") +
                block("备注/风险", "", linesOf(item.remarks), "color:var(--text-soft)");
   // changelog section
   const cl = (item.changelog || []);
-  const clSec = cl.length ? `<details class="d-sec" open><summary class="d-title" style="color:#8a5af5">📝 日期变更记录<span class="count">（${cl.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner">
+  const clSec = cl.length ? `<details class="d-sec"><summary class="d-title" style="color:#8a5af5">📝 日期变更记录<span class="count">（${cl.length}）</span><span class="chev">▶</span></summary><div class="d-body-inner">
     <ol>${cl.map(c => `<li><div style="font-size:12px;color:#8a92a3;margin-bottom:2px">${esc(c.time)} · ${esc(c.user)} · ${esc(c.mode || "")}</div><div>${esc(c.action)}</div></li>`).join("")}</ol></div></details>` : "";
   // minutes section（原版纪要归档）
   const mins = (item.minutes || []).sort((a,b) => (b.time||"").localeCompare(a.time||""));
-  const minsSec = mins.length ? `<details class="d-sec" open><summary class="d-title" style="color:#1d8db5">📁 原版会议纪要<span class="count">（${mins.length} 份）</span><span class="chev">▶</span></summary><div class="d-body-inner">
+  const minsSec = mins.length ? `<details class="d-sec"><summary class="d-title" style="color:#1d8db5">📁 原版会议纪要<span class="count">（${mins.length} 份）</span><span class="chev">▶</span></summary><div class="d-body-inner">
     ${mins.map(m => `<details style="margin-bottom:6px;background:#fafbfd;border:1px solid var(--border);border-radius:6px;padding:6px 10px">
       <summary style="cursor:pointer;font-weight:600;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:8px">
         <span>${esc(m.title || "未命名纪要")} <span style="color:var(--text-soft);font-weight:400;margin-left:8px">${esc(m.time||"")} · ${esc(m.user||"")}</span></span>
