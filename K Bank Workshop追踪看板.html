@@ -35,7 +35,7 @@
     color: var(--text); font-family: var(--font); font-size: 14px; padding: 32px 28px; min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 1440px; margin: 0 auto; }
+  .wrap { max-width: 1480px; margin: 0 auto; padding: 0 20px; overflow-x: hidden; box-sizing: border-box; }
 
   /* page header */
   .page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
@@ -165,29 +165,29 @@
   .ticket .d-sec li { font-size: 12.5px; line-height: 1.6; margin-bottom: 4px; }
   /* 任务看板 */
   /* 任务看板 · 状态分列（标准 Kanban 风格） */
-  #view-tasks { width: 100%; box-sizing: border-box; margin: 0; padding: 0; }
-  .tboard-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; box-sizing: border-box; margin: 0; padding: 0; }
-  @media (max-width: 1100px) { .tboard-cols { grid-template-columns: repeat(2, 1fr); } }
+  #view-tasks { width: 100%; box-sizing: border-box; margin: 0; padding: 0; overflow: hidden; }
+  .tboard-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: 100%; box-sizing: border-box; margin: 0; padding: 0; }
+  @media (max-width: 1100px) { .tboard-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 620px)  { .tboard-cols { grid-template-columns: 1fr; } }
-  .tboard-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; min-height: 200px; display: flex; flex-direction: column; }
-  .tboard-col-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 10px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
-  .tboard-col-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
-  .tboard-col-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .tboard-col-count { font-size: 11px; background: var(--border); color: var(--text-soft); padding: 2px 8px; border-radius: 10px; font-weight: 700; }
-  .tboard-col-body { flex: 1; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+  .tboard-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; min-height: 200px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+  .tboard-col-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; flex-shrink: 0; }
+  .tboard-col-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+  .tboard-col-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .tboard-col-count { font-size: 11px; background: var(--border); color: var(--text-soft); padding: 2px 8px; border-radius: 10px; font-weight: 700; flex-shrink: 0; }
+  .tboard-col-body { flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 80px; min-width: 0; overflow: hidden; }
   .tboard-col.empty { background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 10px, rgba(0,0,0,.02) 10px, rgba(0,0,0,.02) 20px); }
-  .tboard-empty { padding: 20px 8px; font-size: 12px; color: var(--text-soft); text-align: center; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); }
-  .t-task { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); padding: 10px 12px; background: #fff; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
+  .tboard-empty { padding: 16px 6px; font-size: 12px; color: var(--text-soft); text-align: center; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); }
+  .t-task { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); padding: 8px 10px; background: #fff; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; min-width: 0; overflow: hidden; }
   .t-task:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.08); }
   .t-task.t-done { opacity: .55; text-decoration: line-through; }
-  .t-task .t-row1 { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
-  .t-task .t-owner { font-size: 10.5px; padding: 1px 8px; border-radius: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
-  .t-task .t-code { font-family: ui-monospace, monospace; font-size: 11px; background: var(--border); padding: 1px 6px; border-radius: 4px; color: var(--text-soft); font-weight: 700; }
-  .t-task .t-src { font-size: 11px; color: var(--text-soft); font-weight: 600; }
-  .t-task .t-title { font-size: 13px; font-weight: 600; line-height: 1.45; color: var(--text); margin-bottom: 4px; white-space: pre-wrap; word-break: break-word; }
-  .t-task .t-title-en { font-size: 11.5px; color: var(--text-soft); line-height: 1.4; margin-bottom: 6px; white-space: pre-wrap; word-break: break-word; }
-  .t-task .t-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: var(--text-soft); }
-  .t-task .t-due { padding: 1px 6px; border-radius: 4px; background: var(--border); font-weight: 600; }
+  .t-task .t-row1 { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; flex-wrap: wrap; min-width: 0; }
+  .t-task .t-owner { font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; flex-shrink: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .t-task .t-code { font-family: ui-monospace, monospace; font-size: 10.5px; background: var(--border); padding: 1px 5px; border-radius: 4px; color: var(--text-soft); font-weight: 700; flex-shrink: 0; }
+  .t-task .t-src { font-size: 10.5px; color: var(--text-soft); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .t-task .t-title { font-size: 12.5px; font-weight: 600; line-height: 1.4; color: var(--text); margin-bottom: 3px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
+  .t-task .t-title-en { font-size: 11px; color: var(--text-soft); line-height: 1.35; margin-bottom: 4px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
+  .t-task .t-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-soft); }
+  .t-task .t-due { padding: 1px 6px; border-radius: 4px; background: var(--border); font-weight: 600; white-space: nowrap; flex-shrink: 0; }
   .t-task .t-due.overdue { background: #fde2e2; color: #f53f3f; }
   .t-task .t-remark-dot { color: #f77234; }
 
