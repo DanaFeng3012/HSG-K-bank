@@ -163,6 +163,26 @@
   .ticket .d-title { font-size: 12px; padding: 7px 10px; padding-left: 14px; }
   .ticket .d-sec .d-body-inner { padding: 0 10px 10px; }
   .ticket .d-sec li { font-size: 12.5px; line-height: 1.6; margin-bottom: 4px; }
+  /* 任务看板 */
+  .tboard-cols { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(300px, 1fr); gap: 16px; overflow-x: auto; padding-bottom: 8px; }
+  .tboard-col { background: rgba(255,255,255,.75); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; min-height: 200px; backdrop-filter: blur(4px); }
+  .tboard-col h3 { font-size: 13px; font-weight: 700; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; letter-spacing: .02em; }
+  .tboard-col h3 .col-count { background: var(--border); color: var(--text-soft); font-size: 11px; padding: 1px 8px; border-radius: 10px; font-weight: 600; }
+  .t-sublane { margin-bottom: 12px; }
+  .t-sublane-head { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-soft); margin-bottom: 6px; padding: 3px 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+  .t-sublane-count { font-size: 11px; font-weight: 600; }
+  .t-task { border: 1px solid var(--border); border-left: 3px solid currentColor; border-radius: var(--radius-sm); padding: 10px 12px; background: var(--surface); margin-bottom: 8px; font-size: 12.5px; line-height: 1.5; cursor: pointer; transition: box-shadow .15s ease; }
+  .t-task:hover { box-shadow: var(--shadow-lift); }
+  .t-task.t-done { opacity: .65; }
+  .t-task .t-src { font-size: 11px; color: var(--text-soft); margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .t-task .t-src .src-name { font-weight: 600; }
+  .t-task .t-code { font-family: ui-monospace, monospace; font-size: 11px; background: var(--border); padding: 1px 6px; border-radius: 4px; color: var(--text-soft); }
+  .t-task .t-desc { white-space: pre-wrap; word-break: break-word; font-size: 12.5px; }
+  .t-task .t-meta2 { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .t-task .t-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .t-task .t-due { font-size: 11px; color: var(--text-soft); margin-top: 6px; }
+  .t-task .t-due.overdue { color: #f53f3f; font-weight: 700; }
+  .tboard-empty { padding: 12px; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--text-soft); font-size: 12px; text-align: center; }
   .col.drop-hover { outline: 2px dashed var(--accent); outline-offset: -2px; background: var(--accent-soft); }
 
   /* BA 汇总视图 */
@@ -278,6 +298,7 @@
     <div class="tab active" data-view="table">模块总览</div>
     <div class="tab" data-view="gantt">📅 甘特图</div>
     <div class="tab" data-view="board">看板视图</div>
+    <div class="tab" data-view="tasks">✅ 任务看板</div>
     <div class="tab" data-view="minutes">📝 会议纪要</div>
     <div class="tab" data-view="summary">BA 汇总 / 导出</div>
   </div>
@@ -312,6 +333,7 @@
 
   <div class="card hidden" id="view-gantt"><div class="gantt-legend" id="gantt-legend"></div><div id="gantt-host"></div></div>
   <div class="board hidden" id="view-board"></div>
+  <div class="board hidden" id="view-tasks"></div>
   <div id="view-minutes" class="hidden" style="max-width:100%"></div>
   <div id="view-summary" class="hidden" style="max-width:100%"></div>
 </div>
@@ -472,6 +494,23 @@ const CONFIG = {
   firebasePath: "kbank-items",
   firebaseDictsPath: "kbank-dicts",
   firebaseFilesPath: "kbank-files",
+  firebaseTasksPath: "kbank-tasks",
+
+  // 任务看板配置
+  tasks: {
+    owners: [
+      { key: "K Bank",   label: "K Bank",   color: "#fff1e0", text: "#f77234" },
+      { key: "HSG",       label: "HSG",       color: "#eef1ff", text: "#4b63ff" },
+      { key: "协同",       label: "协同跟进",   color: "#f0eafe", text: "#7a5af5" },
+      { key: "未识别",     label: "未识别",     color: "#f2f3f5", text: "#86909c" },
+    ],
+    statuses: [
+      { key: "todo",     label: "待办",    color: "#f2f3f5", text: "#86909c" },
+      { key: "doing",    label: "进行中",  color: "#eef1ff", text: "#4b63ff" },
+      { key: "blocked",  label: "阻塞",    color: "#fde2e2", text: "#f53f3f" },
+      { key: "done",     label: "已完成",  color: "#eafaef", text: "#3bb066" },
+    ],
+  },
 };
 
 /* ============================================================
@@ -487,9 +526,12 @@ function setStatus(dotColor, text) {
 }
 
 // ---- Firebase 封装 ----
-let _fb = null;       // { app, db, itemsRef, dictsRef, connected: boolean }
+let _fb = null;       // { app, db, itemsRef, dictsRef, tasksRef, connected: boolean }
 let _fbListening = false;
 let _fbLocalWrite = false;  // 标记"这是我刚写的，不要被 onValue 当成远端变化触发重绘"
+
+// ---- 任务看板全局 ----
+let tasks = [];  // [{ id, sourceItemId, sourceItemName, owner, code, description, status, dueDate, createdAt, remark, archived }]
 
 // 判断 Firebase 配置是否完整
 function firebaseConfigured() {
@@ -507,7 +549,8 @@ async function initFirebase() {
     const db = firebase.database();
     const itemsRef = db.ref(CONFIG.firebasePath);
     const dictsRef = db.ref(CONFIG.firebaseDictsPath);
-    _fb = { app, db, itemsRef, dictsRef };
+    const tasksRef = db.ref(CONFIG.firebaseTasksPath);
+    _fb = { app, db, itemsRef, dictsRef, tasksRef };
     setStatus("#3b82f6", "云端已连接");
     console.log("[Firebase] connected ✅");
     return _fb;
@@ -628,6 +671,13 @@ const store = {
         localStorage.setItem(this._dictKey, JSON.stringify(d));
         window.__refreshUI && window.__refreshUI();
       }
+    });
+    // 任务看板 onValue
+    fb.tasksRef.on("value", (snap) => {
+      if (_fbLocalWrite) { _fbLocalWrite = false; return; }
+      const d = snap.val();
+      tasks = d && Array.isArray(d.tasks) ? d.tasks : [];
+      window.__refreshUI && window.__refreshUI();
     });
   },
 
@@ -936,6 +986,19 @@ let items = [];
   render();
   if (mergedAdded !== null && mergedAdded > 0) showToast(`已同步会议纪要增量更新：新增 ${mergedAdded} 条（数据版本 v${CONFIG.dataVersion}）`);
 
+  // ---- 首次任务同步（Firebase 就绪后自动从模块提取行动项）----
+  try {
+    // 等 Firebase 初始化完成
+    if (!_fb) await initFirebase();
+    // 如果 tasks 还没有数据，做一次同步
+    if (!tasks.length) {
+      await syncTasksFromModules();
+      _lastAutoSyncSourceCount = tasks.filter(t => !t.archived).length;
+    }
+  } catch (e) {
+    console.warn("[tasks] initial sync skipped:", e.message);
+  }
+
   // ---- Firebase 实时更新处理 ----
   // 云端为准：整体替换，不做并集（否则云端删掉的纪要/编辑记录会被当前页面缓存复活）
   window.__applyRemoteUpdate = (remoteItems) => {
@@ -950,6 +1013,291 @@ let items = [];
     initFilters(); render();
   };
 })();
+
+/* ========== 任务看板 ========== */
+
+// 从模块的 nextStep 字符串解析出 { owner, code, description, hash }
+function parseNextStep(text, sourceItemId, sourceItemName) {
+  if (!text || !text.trim()) return null;
+  // 匹配开头标记 【Owner · Code】 或 【Owner·Code】 或 [Owner · Code]
+  const mark = text.match(/^[【\[]([^\]】]+?)[】\]]\s*/);
+  let owner = "未识别", code = "";
+  let body = text;
+  if (mark) {
+    const inner = mark[1];
+    body = text.slice(mark[0].length);
+    // 内部再拆 owner 和 code
+    const m = inner.match(/^([^·．.]+?)\s*[·．.]\s*([A-Za-z0-9]+)\s*$/);
+    if (m) {
+      owner = m[1].trim();
+      code = m[2].trim();
+    } else {
+      owner = inner.trim();
+    }
+  }
+  // owner 标准化
+  const oKey = normalizeOwner(owner);
+  const hash = simpleHash(`${sourceItemId}|${body.trim()}`);
+  return { owner: oKey, ownerRaw: owner, code, description: body.trim(), hash };
+}
+
+function normalizeOwner(raw) {
+  const s = (raw || "").trim();
+  if (!s) return "未识别";
+  if (/HSG|hsb|凯捷/i.test(s)) return "HSG";
+  if (/K\s*Bank|KBank|Bank|行方/i.test(s)) return "K Bank";
+  if (/协同|双方|联合|Joint|Both/i.test(s)) return "协同";
+  return s;
+}
+
+function simpleHash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return "h" + Math.abs(h).toString(36);
+}
+
+async function writeTasksToFirebase(tasksArr) {
+  if (!_fb || !_fb.tasksRef) { tasks = tasksArr; return; }
+  try {
+    _fbLocalWrite = true;
+    await _fb.tasksRef.set({ tasks: tasksArr });
+    tasks = tasksArr;
+  } catch (e) {
+    console.warn("[tasks] write failed:", e.message);
+  }
+}
+
+// 从 modules.items 增量同步到 tasks。返回改动摘要。
+async function syncTasksFromModules() {
+  const byHash = new Map();
+  tasks.forEach(t => { if (!t.archived) byHash.set(t.hash, t); });
+  const changes = { created: 0, updated: 0, archived: 0 };
+  const created = Date.now();
+
+  // 所有模块 nextStep 合并
+  const newTasks = [];
+  items.forEach(item => {
+    const steps = linesOf(item.nextStep);
+    steps.forEach(text => {
+      const parsed = parseNextStep(text, item.id, item.name);
+      if (!parsed) return;
+      const existing = byHash.get(parsed.hash);
+      if (existing) {
+        // 已有 — 保留手动字段 (status/dueDate/remark/ownerEdited)，更新 source 信息
+        newTasks.push({ ...existing, sourceItemId: item.id, sourceItemName: item.name, owner: parsed.owner, code: parsed.code, description: parsed.description });
+        byHash.delete(parsed.hash);
+      } else {
+        // 新增
+        newTasks.push({
+          id: "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          sourceItemId: item.id, sourceItemName: item.name,
+          owner: parsed.owner, code: parsed.code, description: parsed.description,
+          status: "todo", dueDate: "", createdAt: new Date(created).toISOString(), remark: "", archived: false, hash: parsed.hash,
+        });
+        changes.created++;
+      }
+    });
+  });
+  // 处理"模块被删 / 行动项被删" — 还留在 byHash 里的旧任务 → archived
+  byHash.forEach(old => {
+    old.archived = true;
+    newTasks.push(old);
+    changes.archived++;
+  });
+
+  await writeTasksToFirebase(newTasks);
+  changes.total = newTasks.filter(t => !t.archived).length;
+  return changes;
+}
+
+function ownerOpt(k) { return CONFIG.tasks.owners.find(o => o.key === k) || CONFIG.tasks.owners[CONFIG.tasks.owners.length - 1]; }
+function statusOpt(k) { return CONFIG.tasks.statuses.find(s => s.key === k) || CONFIG.tasks.statuses[0]; }
+
+function overdueCheck(due) {
+  if (!due) return "";
+  const d = new Date(due), today = new Date(); today.setHours(0,0,0,0); d.setHours(0,0,0,0);
+  return d < today ? "overdue" : "";
+}
+
+// 渲染任务看板：按 owner 分列，每列内按 status 分泳道
+function renderTasks() {
+  const host = $("#view-tasks");
+  const active = tasks.filter(t => !t.archived);
+
+  // 头部：同步按钮 + 统计
+  const counts = { created: active.length, todo: 0, doing: 0, done: 0, blocked: 0 };
+  active.forEach(t => counts[t.status] = (counts[t.status] || 0) + 1);
+  const header = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--text-soft)">任务总数 <b style="color:var(--text)">${counts.created}</b>
+        · 待办 <b>${counts.todo}</b> · 进行中 <b style="color:#4b63ff">${counts.doing}</b> · 阻塞 <b style="color:#f53f3f">${counts.blocked || 0}</b> · 已完成 <b style="color:#3bb066">${counts.done}</b></div>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn ghost" id="btn-task-sync">🔄 从模块同步</button>
+      <button class="btn" id="btn-task-new">+ 新建任务</button>
+    </div>`;
+
+  let html = `<div class="tboard-cols">`;
+  CONFIG.tasks.owners.forEach(ow => {
+    const colTasks = active.filter(t => t.owner === ow.key);
+    const totalInCol = colTasks.length;
+    html += `<div class="tboard-col" style="border-left:4px solid ${ow.text}" data-owner="${ow.key}">`;
+    html += `<h3 style="color:${ow.text}">${ow.label} <span class="col-count">${totalInCol}</span></h3>`;
+    CONFIG.tasks.statuses.forEach(st => {
+      const lane = colTasks.filter(t => t.status === st.key);
+      if (lane.length === 0) return;  // 空泳道隐藏
+      html += `<div class="t-sublane">
+        <div class="t-sublane-head" style="background:${st.color};color:${st.text}">${st.label}
+          <span class="t-sublane-count" style="background:rgba(255,255,255,.7);padding:0 6px;border-radius:8px">${lane.length}</span>
+        </div>`;
+      lane.forEach(t => {
+        const dueCls = overdueCheck(t.dueDate);
+        const dueHtml = t.dueDate ? `<div class="t-due ${dueCls}">⏳ ${t.dueDate}</div>` : "";
+        const doneCls = t.status === "done" ? "t-done" : "";
+        html += `<div class="t-task ${doneCls}" style="color:${st.text};border-color:${st.text}" data-id="${t.id}">
+          <div class="t-src"><span class="src-name">${esc(t.sourceItemName || "—")}</span>${t.code ? `<span class="t-code">${esc(t.code)}</span>` : ""}</div>
+          <div class="t-desc">${esc(t.description)}</div>
+          ${dueHtml}
+          ${t.remark ? `<div style="margin-top:6px;font-size:11px;color:#8a92a3;background:#f9fafb;padding:6px 8px;border-radius:4px;border-left:2px solid var(--text-soft)">📝 ${esc(t.remark)}</div>` : ""}
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    if (totalInCol === 0) html += `<div class="tboard-empty">该责任方暂无行动项</div>`;
+    html += `</div>`;
+  });
+  html += `</div>`;
+  host.innerHTML = header + html;
+
+  // 绑定事件
+  $("#btn-task-sync").onclick = async () => {
+    showToast("🔄 正在从模块同步任务…");
+    try {
+      const changes = await syncTasksFromModules();
+      showToast(`✅ 同步完成：新增 ${changes.created} / 归档 ${changes.archived} / 当前活跃 ${changes.total}`);
+    } catch (e) {
+      showToast(`❌ 同步失败：${e.message}`);
+    }
+  };
+  $("#btn-task-new").onclick = () => openTaskEdit(null);
+  host.querySelectorAll(".t-task").forEach(el => {
+    el.onclick = () => openTaskEdit(tasks.find(t => t.id === el.dataset.id));
+  });
+}
+
+// 任务编辑模态框
+function openTaskEdit(task) {
+  const isNew = !task;
+  const t = task || {
+    id: "t" + Date.now().toString(36), owner: "HSG", code: "", description: "",
+    sourceItemId: "", sourceItemName: "", status: "todo", dueDate: "", remark: "", archived: false, hash: "manual-" + Date.now(),
+  };
+
+  const sources = items.filter(i => (i.nextStep || []).length).map(i => `<option value="${i.id}" ${i.id === t.sourceItemId ? "selected" : ""}>${esc(i.name)}</option>`).join("");
+  const optsOwn = CONFIG.tasks.owners.map(o => `<option value="${o.key}" ${o.key === t.owner ? "selected" : ""}>${o.label}</option>`).join("");
+  const optsSt = CONFIG.tasks.statuses.map(s => `<option value="${s.key}" ${s.key === t.status ? "selected" : ""}>${s.label}</option>`).join("");
+
+  const ov = document.createElement("div");
+  ov.className = "modal-overlay";
+  ov.innerHTML = `<div class="modal" style="max-width:620px">
+    <div class="modal-head">
+      <h3>${isNew ? "➕ 新建任务" : "✏️ 编辑任务"}</h3>
+      <button class="icon-btn" id="m-close">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+      <div class="field"><label>来源模块</label><select id="te-source"><option value="">（手动创建）</option>${sources}</select></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="field"><label>责任方</label><select id="te-owner">${optsOwn}</select></div>
+        <div class="field"><label>任务编号（可选）</label><input id="te-code" placeholder="如 A1 / B2 / C3" value="${esc(t.code)}"></div>
+      </div>
+      <div class="field"><label>任务描述（完整）</label><textarea id="te-desc" rows="5" style="font-family:var(--font-mono),ui-monospace,monospace">${esc(t.description)}</textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="field"><label>任务状态</label><select id="te-status">${optsSt}</select></div>
+        <div class="field"><label>截止日期</label><input id="te-due" type="date" value="${t.dueDate || ""}"></div>
+      </div>
+      <div class="field"><label>备注</label><textarea id="te-remark" rows="3">${esc(t.remark || "")}</textarea></div>
+      ${!isNew ? `<div style="font-size:11px;color:var(--text-soft);margin-top:10px">创建于 ${t.createdAt ? new Date(t.createdAt).toLocaleString() : "—"} ｜ ID ${t.id}</div>` : ""}
+    </div>
+    <div class="modal-foot">
+      ${!isNew ? `<button class="btn ghost danger" id="te-delete">🗑 归档</button>` : ""}
+      <div class="spacer"></div>
+      <button class="btn ghost" id="te-cancel">取消</button>
+      <button class="btn" id="te-save">保存</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector("#m-close").onclick = () => ov.remove();
+  ov.querySelector("#te-cancel").onclick = () => ov.remove();
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+
+  // 关联来源模块后自动补 code（可选）
+  const selSrc = ov.querySelector("#te-source");
+  selSrc.onchange = () => {
+    const mid = parseInt(selSrc.value);
+    if (mid && !ov.querySelector("#te-code").value) {
+      const steps = linesOf((items.find(i => i.id === mid) || {}).nextStep);
+      if (steps.length) {
+        const first = parseNextStep(steps[0], mid, (items.find(i => i.id === mid) || {}).name);
+        if (first && first.code) ov.querySelector("#te-code").value = first.code + "*";
+      }
+    }
+  };
+
+  ov.querySelector("#te-save").onclick = async () => {
+    const owner = ov.querySelector("#te-owner").value;
+    const code = ov.querySelector("#te-code").value.trim();
+    const desc = ov.querySelector("#te-desc").value.trim();
+    const status = ov.querySelector("#te-status").value;
+    const dueDate = ov.querySelector("#te-due").value;
+    const remark = ov.querySelector("#te-remark").value.trim();
+    const srcId = parseInt(ov.querySelector("#te-source").value) || "";
+    const srcName = srcId ? (items.find(i => i.id === srcId) || {}).name || "" : "";
+
+    if (!desc) { showToast("❌ 任务描述不能为空"); return; }
+
+    const updated = [...tasks];
+    if (isNew) {
+      updated.push({
+        id: t.id, sourceItemId: srcId, sourceItemName: srcName,
+        owner, code, description: desc, status, dueDate, createdAt: new Date().toISOString(), remark, archived: false,
+        hash: t.hash,
+      });
+    } else {
+      const idx = updated.findIndex(x => x.id === t.id);
+      if (idx >= 0) {
+        updated[idx] = { ...updated[idx], owner, code, description: desc, status, dueDate, remark, sourceItemId: srcId, sourceItemName: srcName };
+      }
+    }
+    await writeTasksToFirebase(updated);
+    ov.remove();
+    showToast(isNew ? "✅ 已新建任务" : "✅ 任务已保存");
+  };
+
+  const delBtn = ov.querySelector("#te-delete");
+  if (delBtn) {
+    delBtn.onclick = async () => {
+      if (!confirm("确认归档此任务？（不会真删，仍可通过'从模块同步'取消归档）")) return;
+      const updated = tasks.map(x => x.id === t.id ? { ...x, archived: true } : x);
+      await writeTasksToFirebase(updated);
+      ov.remove();
+      showToast("📦 已归档");
+    };
+  }
+}
+
+// 模块保存时自动增量同步（debounced 到 store.save 之后）
+let _lastAutoSyncSourceCount = 0;
+async function autoSyncIfNeeded() {
+  try {
+    const active = tasks.filter(t => !t.archived).length;
+    if (active === _lastAutoSyncSourceCount) return;
+    await syncTasksFromModules();
+    _lastAutoSyncSourceCount = tasks.filter(t => !t.archived).length;
+  } catch (e) {
+    console.warn("[autoSync] skipped:", e.message);
+  }
+}
 
 function filtered() {
   const s = $("#filter-status").value, p = $("#filter-priority").value, q = $("#search").value.trim().toLowerCase();
@@ -1066,11 +1414,13 @@ function render() {
   $("#view-table").classList.toggle("hidden", currentView !== "table");
   $("#view-gantt").classList.toggle("hidden", currentView !== "gantt");
   $("#view-board").classList.toggle("hidden", currentView !== "board");
+  $("#view-tasks").classList.toggle("hidden", currentView !== "tasks");
   $("#view-minutes").classList.toggle("hidden", currentView !== "minutes");
   $("#view-summary").classList.toggle("hidden", currentView !== "summary");
   if (currentView === "table") renderTable();
   else if (currentView === "gantt") renderGantt();
   else if (currentView === "board") renderBoard();
+  else if (currentView === "tasks") renderTasks();
   else if (currentView === "minutes") renderMinutes();
   else renderSummary();
   } catch(e) {
