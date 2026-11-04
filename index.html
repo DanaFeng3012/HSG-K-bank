@@ -269,6 +269,7 @@
   .gantt-row-name { font-weight: 600; font-size: 12.5px; line-height: 1.35; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
   .gantt-row-name:hover { color: var(--accent); }
   .gantt-row-meta { font-size: 10.5px; color: var(--text-soft); line-height: 1.3; }
+  .gantt-row-unavail { font-size: 10px; color: #d93f3f; line-height: 1.25; margin-top: 2px; opacity: .85; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .gantt-row-cl { font-size: 10px; color: #8a5af5; line-height: 1.25; margin-top: 2px; background: rgba(122, 90, 245, .07); padding: 2px 5px; border-radius: 3px; max-width: 260px; }
   /* timeline 列 — 一个相对定位容器 */
   .timeline-cell { position: relative; overflow: visible; }
@@ -292,7 +293,7 @@
   .gantt-bar .resize.right { right: 0; border-radius: 0 6px 6px 0; }
   .gantt-bar:hover .resize { background: rgba(255,255,255,.55); }
   /* unavailable — 降低视觉权重 */
-  .gantt-unavail { position: absolute; top: 0; bottom: 0; pointer-events: none; background: repeating-linear-gradient(45deg, rgba(245, 63, 63, .07), rgba(245, 63, 63, .07) 6px, rgba(245, 63, 63, .03) 6px, rgba(245, 63, 63, .03) 12px); }
+  .gantt-unavail { position: absolute; top: 0; bottom: 0; pointer-events: none; z-index: 0; background: repeating-linear-gradient(45deg, rgba(245, 63, 63, .10), rgba(245, 63, 63, .10) 6px, rgba(245, 63, 63, .04) 6px, rgba(245, 63, 63, .04) 12px); }
   /* today */
   .gantt-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #f53f3f; z-index: 4; pointer-events: none; }
   .gantt-today-label { position: absolute; transform: translateX(-50%); background: #f53f3f; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px; z-index: 5; white-space: nowrap; pointer-events: none; }
@@ -484,17 +485,21 @@ const CONFIG = {
     labelW: 280,         // 左侧名称列宽度
     start: new Date(2026, 10, 1),   // 2026-11-01（显示起点，含缓冲）
     end:   new Date(2027, 0, 31),    // 2027-01-31
-    // Bank User 不可用时间（来自 Req Plan-20261029 Option 1，取 HK Branch BU ∪ KBANK HQ BU 并集）
-    // HK Branch BU: Nov 9~13, Nov 26~30, Dec 1~4, Dec 8~11, Dec 14~18, Dec 28~29
-    // KBANK HQ BU:  Nov 19~23, Nov 26~30, Dec 1~4, Dec 8~11, Dec 14~18, Dec 28~Jan 21
-    unavailable: [
-      [new Date(2026,10,9),  new Date(2026,10,13)],   // Nov 9~13
-      [new Date(2026,10,19), new Date(2026,10,23)],   // Nov 19~23
-      [new Date(2026,10,26), new Date(2026,10,30)],   // Nov 26~30
-      [new Date(2026,11,1),  new Date(2026,11,4)],    // Dec 1~4
-      [new Date(2026,11,8),  new Date(2026,11,11)],   // Dec 8~11
-      [new Date(2026,11,14), new Date(2026,11,18)],   // Dec 14~18
-      [new Date(2026,11,28), new Date(2027,0,21)],    // Dec 28~Jan 21
+    // 各模块各自的 Bank User 不可用时间（逐模块，来源：Req Plan-20261029 Option 1 B 列）
+    // → 甘特图按行分别遮罩，不再用全局并集
+    unavailableByModule: [
+      { match: /Foreign Exchange/i,  dates: "11/9~11/13、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~12/29" },
+      { match: /Deposit/i,           dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Common \(BP\)/i,     dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /CIF/i,               dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Accounting GL/i,     dates: "12/1~12/4、12/30~1/21" },
+      { match: /Credit Limit/i,      dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /HKMA Report/i,       dates: "12/1~12/4、12/28~1/21" },
+      { match: /Operational & HO/i,  dates: "12/1~12/4、12/28~1/21" },
+      { match: /ALM related/i,       dates: "12/1~12/4、12/28~1/21" },
+      { match: /Trade Finance/i,     dates: "11/9~11/13、12/8~12/11" },
+      { match: /Treasury\s*&\s*MM|Bond Trading|IRS\/CCS|Confirmation Matching/i,
+                                     dates: "11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~12/29" },
     ],
   },
 
@@ -1721,9 +1726,25 @@ function segmentsToDates(segs) {
   }).join("、");
 }
 
-/** 判断段是否与某 unavailable 区间有重叠 */
-function segHasConflict(seg) {
-  return G.unavailable.some(([u1, u2]) => seg.end >= u1 && seg.start <= u2);
+/** 取该模块自己的 unavailable 区间（返回 [{start,end}]） */
+function unavailOf(item) {
+  if (!item || !item.name) return [];
+  const hit = G.unavailableByModule.find(m => m.match.test(item.name));
+  return hit ? parseDates(hit.dates) : [];
+}
+
+/** 判断段是否与该行的 unavailable 区间有重叠 */
+function segHasConflict(seg, item) {
+  return unavailOf(item).some(u => seg.end >= u.start && seg.start <= u.end);
+}
+
+/** 生成该行自己的 unavailable 遮罩 HTML（定位在 timeline-cell 内，左 0 = 起始日） */
+function unavailHTMLFor(item) {
+  return unavailOf(item).map(u => {
+    const x = dateToX(u.start);
+    const w = Math.max((daysBetween(u.start, u.end) + 1) * G.dayWidth, 2);
+    return `<div class="gantt-unavail" style="left:${x}px;width:${w}px" title="Bank User 不可用：${fullFmt(u.start)} ~ ${fullFmt(u.end)}"></div>`;
+  }).join("");
 }
 
 function renderGantt() {
@@ -1737,7 +1758,7 @@ function renderGantt() {
   $("#gantt-legend").innerHTML = `
     <span><span class="swatch" style="background:linear-gradient(135deg,#4b63ff,#6a5af5)"></span>Workshop 任务条（可拖拽）</span>
     <span><span class="swatch" style="transform:rotate(45deg);display:inline-block;background:#7a5af5"></span>里程碑</span>
-    <span><span class="swatch" style="background:repeating-linear-gradient(45deg,rgba(245,63,63,.1),rgba(245,63,63,.1) 5px,rgba(245,63,63,.04) 5px,rgba(245,63,63,.04) 10px)"></span>Bank User 不可用</span>
+    <span><span class="swatch" style="background:repeating-linear-gradient(45deg,rgba(245,63,63,.1),rgba(245,63,63,.1) 5px,rgba(245,63,63,.04) 5px,rgba(245,63,63,.04) 10px)"></span>该模块 Bank User 不可用（逐模块不同）</span>
     <span><span class="swatch" style="background:#f53f3f"></span>今日</span>
     <span style="margin-left:auto;color:var(--text)">计划周期：${fmtDate(G.start)} ~ ${fmtDate(G.end)}（${daysBetween(G.start, G.end)+1} 天）</span>
   `;
@@ -1766,15 +1787,7 @@ function renderGantt() {
     dayCells += `<div class="gantt-day ${isWknd ? "weekend" : ""}">${d.getDate()}</div>`;
   }
 
-  // --- unavailable 遮罩（只画一份在 body 最底层） ---
-  let unavailHTML = "";
-  G.unavailable.forEach(([s, e]) => {
-    const x1 = dateToX(s);
-    const x2 = dateToX(e) + G.dayWidth;
-    if (x2 < 0 || x1 > chartW) return;
-    const x = Math.max(0, x1), ww = Math.min(chartW, x2) - x;
-    unavailHTML += `<div class="gantt-unavail" style="left:${x}px;width:${ww}px" title="Bank User 不可用：${fmtDate(s)} ~ ${fmtDate(e)}"></div>`;
-  });
+  // --- unavailable 遮罩改为按行绘制（见下方 bodyHTML 每行 timeline-cell），此处不再画全局并集 ---
 
   // --- today 线 ---
   const today = new Date(); today.setHours(0,0,0,0);
@@ -1870,6 +1883,10 @@ function renderGantt() {
       const cl = (item.changelog || [])[0];
       const clLine = cl ? `<div class="gantt-row-cl">📝 ${esc(cl.time)} · ${esc(cl.user)}：${esc(cl.action)}</div>` : "";
       const typeTag = kind === "gate" ? "· 🔴 Gate" : kind === "milestone-task" ? "· 📋 里程碑" : "";
+      const unavSegs = unavailOf(item);
+      const unavailMeta = unavSegs.length
+        ? `<div class="gantt-row-unavail" title="${esc(unavSegs.map(u => `${fullFmt(u.start)}~${fullFmt(u.end)}`).join(" | "))}">🚫 不可用：${esc(segmentsToDates(unavSegs).replace(/^\d{4}\//g, ""))}</div>`
+        : "";
 
       bodyHTML += `<div class="grid-row" style="grid-template-columns:${colTemplate}">
         <div class="label-cell">
@@ -1877,9 +1894,10 @@ function renderGantt() {
           <div class="gantt-row-meta">
             ${esc(item.dates || "")} · ${esc(statusOf(item.status).label)}${typeTag}${item.owner ? " · " + esc(item.owner) : ""}
           </div>
+          ${unavailMeta}
           ${clLine}
         </div>
-        <div class="timeline-cell bars-host" data-idx="${idx}" data-batch="${batch}" style="grid-column:2 / -1">${segBars}</div>
+        <div class="timeline-cell bars-host" data-idx="${idx}" data-batch="${batch}" style="grid-column:2 / -1">${unavailHTMLFor(item)}${segBars}</div>
       </div>`;
     });
 
@@ -1905,7 +1923,7 @@ function renderGantt() {
         ${dayCells}
       </div>
       <div class="gantt-body gantt-grid" style="grid-template-columns:${colTemplate};position:relative">
-        <div class="gantt-shared-overlay" style="left:${labelW}px;width:${chartW}px">${unavailHTML}${todayHTML}${gateOverlaysHTML}</div>
+        <div class="gantt-shared-overlay" style="left:${labelW}px;width:${chartW}px">${todayHTML}${gateOverlaysHTML}</div>
         ${bodyHTML}
       </div>
     </div>
