@@ -1807,7 +1807,8 @@ function unavailHTMLFor(item) {
 }
 
 function renderGantt() {
-  const data = filtered();
+  // 已合并的遗留条目不再进入甘特图（仅保留在列表/详情中用于历史追溯）
+  const data = filtered().filter(i => i.status !== "merged");
   if (!data.length) {
     $("#gantt-host").innerHTML = `<div class="empty" style="padding:40px;text-align:center">当前筛选下没有数据</div>`;
     $("#gantt-legend").innerHTML = ""; return;
@@ -1862,7 +1863,10 @@ function renderGantt() {
   const order = CONFIG.priorities.map(p => p.key);
   const byPrio = {};
   data.forEach(i => { const b = i.priority || "未分批"; (byPrio[b] = byPrio[b] || []).push(i); });
-  const batches = Object.keys(byPrio).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const batches = Object.keys(byPrio).sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
 
   // --- 任务条颜色映射（用深色，白字） ---
   const barPalette = {
@@ -2141,7 +2145,7 @@ function renderGantt() {
    导出甘特图为 JPG（Canvas 手绘，无外部依赖）
    ============================================================ */
 async function exportGanttJPG() {
-  const data = filtered();
+  const data = filtered().filter(i => i.status !== "merged");
   if (!data.length) { showToast("⚠️ 当前筛选下没有数据可导出"); return; }
   showToast("🖼 正在生成 JPG，请稍候…");
   await new Promise(r => setTimeout(r, 80));
@@ -2164,12 +2168,15 @@ async function exportGanttJPG() {
   const order = CONFIG.priorities.map(p => p.key);
   const byPrio = {};
   data.forEach(i => { const b = i.priority || "未分批"; (byPrio[b] = byPrio[b] || []).push(i); });
-  const batches = Object.keys(byPrio).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  const batches = Object.keys(byPrio).sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
 
   let bodyH = 0;
   batches.forEach(b => { bodyH += BATCH_H + byPrio[b].length * ROW_H; });
 
-  const cw = PAD * 2 + LABEL_W + chartW;
+  const cw = PAD + LABEL_W + chartW + 56;   // 右侧留 56px 余量，避免 gate 菱形/箭头被裁切
   const ch = PAD * 2 + TITLE_H + MONTH_H + DAY_H + bodyH + LEGEND_H;
 
   const canvas = document.createElement("canvas");
@@ -2288,7 +2295,7 @@ async function exportGanttJPG() {
       text(clip(metaTxt, LABEL_W - 26, 9.5, 400), PAD + 10, rowTop + 27, 9.5, 400, "#8a92a3");
       if (unav.length) {
         const unTxt = "不可用：" + unav.map(u => `${fmtDate(u.start)}~${fmtDate(u.end)}`).join("、");
-        text(clip(unTxt, LABEL_W - 26, 9, 400), PAD + 10, rowTop + 39, 9, 400, "#d93f3f");
+        text(clip(unTxt, LABEL_W - 26, 9, 400), PAD + 10, rowTop + 37, 9, 400, "#d93f3f");
       }
 
       // --- 不可用斜纹遮罩 ---
