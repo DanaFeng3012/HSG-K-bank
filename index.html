@@ -394,9 +394,12 @@ const CONFIG = {
   dataVersion: 1,
 
   // 增量更新区（只增不改不删，由 Trae 维护）。条目格式：
-  // { module: "模块/里程碑名称", status: "仅在用户明确要求时更新阶段",
+  // { module: "模块/里程碑名称", status: "可选：显式指定阶段",
   //   add: { confirmed: ["..."], disputes: ["..."], discussions: ["..."],
-  //          gapConclusion: ["..."], nextStep: ["..."], deliverables: ["..."], remarks: ["..."] } }
+  //          gapConclusion: ["..."], nextStep: ["..."], deliverables: ["..."], remarks: ["..."],
+  //          minutes: [{ time, user, title, ... }] } }
+  // 注意：只要条目带了 minutes（会议纪要），该模块阶段会自动从「未开始」推进到
+  //      「Workshop 进行中」；已推进到更后阶段的模块不会被回退。
   updates: [
   ],
 
@@ -1693,6 +1696,19 @@ function fmtDate(d) { return `${d.getMonth()+1}/${d.getDate()}`; }
 function fullFmt(d) { return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
 
 /**
+ * 会议纪要 = Workshop 已实际开始：
+ * 模块只要挂了纪要，阶段自动从「未开始」(plan) 推进到「Workshop 进行中」(ws)。
+ * 单向规则：gap / waitconfirm / confirmed / signoff 更后阶段一律不回退，merged 跳过。
+ */
+function applyMinutesStatus(list) {
+  (list || []).forEach(it => {
+    if (!it || it.status === "merged") return;
+    if ((it.minutes || []).length && it.status === "plan") it.status = "ws";
+  });
+  return list;
+}
+
+/**
  * 以 CONFIG.seed（Plan 原文）为唯一模块主数据：
  * - 名称/日期/优先级/类型/备注 强制同步（这些属于计划主数据，不是用户成果）
  * - 保留用户成果：status / owner / minutes / discussions / disputes / gapConclusion / nextStep / changelog
@@ -1722,6 +1738,8 @@ function migrateItemsToSeed(existing) {
                         (it.nextStep && it.nextStep.length);
     if (hasUserWork) out.push({ ...it, status: "merged" });
   });
+  // 有纪要的模块 → Workshop 进行中（单向推进，不回退）
+  applyMinutesStatus(out);
   return out;
 }
 
@@ -2767,6 +2785,8 @@ function applyUpdates(list) {
       it[field] = cur;
     });
   });
+  // 本次增量里带了会议纪要的模块 → 自动推进到 Workshop 进行中
+  applyMinutesStatus(list);
   localStorage.setItem(key, String(CONFIG.dataVersion));
   return added;
 }
@@ -3040,6 +3060,7 @@ async function manualSync() {
       return merged;
     });
     items = [...items, ...remoteItems.filter(x => !localIds.has(x.id))];
+    applyMinutesStatus(items);
     // dicts 合并
     if (remote.dicts) {
       if (Array.isArray(remote.dicts.priorities)) CONFIG.priorities = remote.dicts.priorities;
