@@ -437,28 +437,32 @@ const CONFIG = {
   ],
 
   seed: [
-    // ======== V1.0 合并模块（按 HK Branch Corebanking_Req_Plan_V1.0_20261104.xlsx） ========
-    { id: 1,  name: "Foreign Exchange (EX) + Operational & HO Report 外汇+运营报表", priority: "第1轮", status: "plan", dates: "11/2 ~ 11/4、11/10", actual: "", owner: "", remarks: ["行方BU不可用：11/9~13、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 2,  name: "Deposit (TD/DD) + Advices & Forms 存款+通知单", priority: "第1轮", status: "plan", dates: "11/5 ~ 11/6", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 3,  name: "Common (BP) 公共", priority: "第1轮", status: "plan", dates: "11/9", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 4,  name: "CIF (CI) 客户信息", priority: "第1轮", status: "plan", dates: "11/11", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 5,  name: "Accounting GL (AI) + Report 会计总账+报表", priority: "第1轮", status: "plan", dates: "11/11", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/30~1/21"] },
-    { id: 6,  name: "Credit Limit & Collateral & Loan (CL/LN) + Advise + Operational & HO Report 信贷+通知单", priority: "第1轮", status: "plan", dates: "11/12 ~ 11/13、11/16 ~ 11/19", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 7,  name: "【里程碑】Preparing the Doc（Gap Solution ① 准备文档）", priority: "第1轮", status: "plan", dates: "11/18 ~ 11/20、12/4", actual: "", owner: "" },
-    { id: 8,  name: "【里程碑】Review & Refine Document workshop-1", priority: "第1轮", status: "plan", dates: "12/1 ~ 12/3", actual: "", owner: "" },
-    { id: 9,  name: "【里程碑】Confirmation--1（集中确认）", priority: "第1轮", status: "plan", dates: "12/7", actual: "", owner: "" },
-    { id: 10, name: "Payment Connectivity 支付连接", priority: "第2轮", status: "plan", dates: "11/19 ~ 11/20", actual: "", owner: "" },
-    { id: 11, name: "HKMA Report 监管报表", priority: "第2轮", status: "plan", dates: "11/20、11/23 ~ 11/24", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/28~1/21"] },
-    { id: 12, name: "Trade Finance (TF) + Remittance + Operational & HO Report 贸易融资+汇款", priority: "第2轮", status: "plan", dates: "12/14 ~ 12/18", actual: "", owner: "", remarks: ["行方BU不可用：11/9~13、12/1~4、12/8~11、12/28~1/21"] },
-    { id: 13, name: "Treasury & MM (IB/IL) + ALM + Operational & HO Report 资金与货币市场+ALM", priority: "第3轮", status: "plan", dates: "12/7 ~ 12/11", actual: "", owner: "", remarks: ["行方BU不可用：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29、12/28~1/21"] },
-    { id: 14, name: "Bond Trading and Issuance 债券交易与发行", priority: "第3轮", status: "plan", dates: "12/7 ~ 12/11", actual: "", owner: "" },
-    { id: 15, name: "Confirmation Matching 确认匹配", priority: "第3轮", status: "plan", dates: "12/21 ~ 12/23", actual: "", owner: "" },
-    { id: 16, name: "IRS/CCS 利率与货币互换", priority: "第3轮", status: "plan", dates: "1/11 ~ 1/14", actual: "", owner: "" },
-    { id: 17, name: "Others 其他", priority: "第3轮", status: "plan", dates: "1/18 ~ 1/22", actual: "", owner: "" },
-    { id: 18, name: "【里程碑】Doc Preparation（Gap Solution ② + FS Doc Cycle 1&2）", priority: "第2轮", status: "plan", dates: "11/25 ~ 11/27、11/30、12/24、12/28 ~ 12/31、1/4 ~ 1/8、1/15", actual: "", owner: "" },
-    { id: 19, name: "【里程碑】Review & Refine Document workshop-2", priority: "第2轮", status: "plan", dates: "1/25 ~ 1/27", actual: "", owner: "" },
-    { id: 20, name: "【里程碑】Sign Off--1 & 2（Cycle 1&2 合并签署）", priority: "全项目", status: "plan", dates: "1/28 ~ 1/29", actual: "", owner: "" },
-    { id: 21, name: "Payment Connectivity / Advices & Forms / Remittance（已合并至主模块，保留条目仅用于历史关联）", priority: "已合并", status: "merged", dates: "", actual: "", owner: "" },
+    // ============================================================
+    // 模块严格照录 HK Branch Corebanking_Req_Plan_V1.0_20261104.xlsx
+    // 的 "Req Plan Proposal" 工作表第 4~23 行 A 列（含编号与 "+" 前缀），
+    // 顺序与 Plan 完全一致，不做任何人为合并/改名。
+    // type: gate / milestone 用于甘特图样式；未标注即为 Workshop 模块。
+    // ============================================================
+    { id: 1,  name: "5. Foreign Exchange(EX) & report\n+Operational & HO Report", priority: "第1轮", status: "plan", type: "workshop", dates: "11/2 ~ 11/4、11/10", actual: "", owner: "", remarks: ["行方BU不可用：11/9~13、11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"] },
+    { id: 2,  name: "4. Deposit(TD,DD) & report & advise", priority: "第1轮", status: "plan", type: "workshop", dates: "11/5 ~ 11/6", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 3,  name: "1. Common(BP)", priority: "第1轮", status: "plan", type: "workshop", dates: "11/9", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 4,  name: "2. CIF(CI)", priority: "第1轮", status: "plan", type: "workshop", dates: "11/11", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 5,  name: "8. Accounting GL(AI) & report", priority: "第1轮", status: "plan", type: "workshop", dates: "11/11", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/30~1/21"] },
+    { id: 6,  name: "3. Credit Limit & Collateral & Loan(CL,LN) & Advise & Report\n+Operational & HO Report", priority: "第1轮", status: "plan", type: "workshop", dates: "11/12 ~ 11/13、11/16 ~ 11/19", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 7,  name: "Preparing the Doc", priority: "第1轮", status: "plan", type: "milestone", dates: "11/18 ~ 11/20、12/4", actual: "", owner: "" },
+    { id: 8,  name: "Review & Refine Document workshop-1", priority: "第1轮", status: "plan", type: "milestone", dates: "12/1 ~ 12/3", actual: "", owner: "" },
+    { id: 9,  name: "Confirmation--1", priority: "第1轮", status: "plan", type: "gate", dates: "12/7", actual: "", owner: "" },
+    { id: 10, name: "11. Payment Connectivity", priority: "第2轮", status: "plan", type: "workshop", dates: "11/19 ~ 11/20", actual: "", owner: "" },
+    { id: 11, name: "9. HKMA Report", priority: "第2轮", status: "plan", type: "workshop", dates: "11/20、11/23 ~ 11/24", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/28~1/21"] },
+    { id: 12, name: "7. Trade Finance(TF) + Remittance+Operational & HO Report", priority: "第2轮", status: "plan", type: "workshop", dates: "12/14 ~ 12/18", actual: "", owner: "", remarks: ["行方BU不可用：11/9~13、12/8~11"] },
+    { id: 13, name: "6. Treasury&MM(IB,IL)+ALM+Operational & HO Report", priority: "第3轮", status: "plan", type: "workshop", dates: "12/7 ~ 12/11", actual: "", owner: "", remarks: ["行方BU不可用：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"] },
+    { id: 14, name: "+ Bond Trading and Issuance", priority: "第3轮", status: "plan", type: "workshop", dates: "12/7 ~ 12/11", actual: "", owner: "", remarks: ["行方BU不可用（同 Treasury&MM）：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"] },
+    { id: 15, name: "Confirmation Matching", priority: "第3轮", status: "plan", type: "workshop", dates: "12/21 ~ 12/23", actual: "", owner: "", remarks: ["行方BU不可用（同 Treasury&MM）：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"] },
+    { id: 16, name: "+ IRS/CCS", priority: "第3轮", status: "plan", type: "workshop", dates: "1/11 ~ 1/14", actual: "", owner: "", remarks: ["行方BU不可用（同 Treasury&MM）：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"] },
+    { id: 17, name: "Others", priority: "第3轮", status: "plan", type: "workshop", dates: "1/18 ~ 1/22", actual: "", owner: "" },
+    { id: 18, name: "Doc Preparation", priority: "第2轮", status: "plan", type: "milestone", dates: "11/25 ~ 11/27、11/30、12/24、12/28 ~ 12/31、1/4 ~ 1/8、1/15", actual: "", owner: "" },
+    { id: 19, name: "Review & Refine Document workshop-2", priority: "第2轮", status: "plan", type: "milestone", dates: "1/25 ~ 1/27", actual: "", owner: "" },
+    { id: 20, name: "Sign Off--1 & 2", priority: "全项目", status: "plan", type: "gate", dates: "1/28 ~ 1/29", actual: "", owner: "" },
   ],
 
   // 编辑弹窗字段
@@ -494,25 +498,20 @@ const CONFIG = {
     labelW: 280,         // 左侧名称列宽度
     start: new Date(2026, 10, 1),   // 2026-11-01（显示起点，含缓冲）
     end:   new Date(2027, 0, 31),    // 2027-01-31
-    // 各模块各自的 Bank User 不可用时间（逐模块，来源：Req Plan-20261029 Option 1 B 列）
-    // → 甘特图按行分别遮罩，不再用全局并集
-    // 各模块各自的 Bank User 不可用时间（V1.0 合并后，取所合并模块不可用区间的并集）
-    // 来源：HK Branch Corebanking_Req_Plan_V1.0_20261104.xlsx 各合并行 B 列
+    // 各模块各自的 Bank User 不可用时间 —— 严格照录 Plan 的 B 列（逐行，不做并集）
+    // B16:B19 为合并单元格，故 Bond / Confirmation Matching / IRS-CCS 共用 Treasury&MM 的不可用区间
     unavailableByModule: [
-      { match: /Foreign Exchange|Operational & HO/i,
-                                     dates: "11/9~11/13、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
-      { match: /Deposit|Advices & Forms/i,
-                                     dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
-      { match: /Common \(BP\)/i,     dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
-      { match: /CIF/i,               dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Foreign Exchange/i,
+                                     dates: "11/9~11/13、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~12/29" },
+      { match: /Deposit/i,           dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Common\(BP\)/i,      dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /CIF\(CI\)/i,         dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
       { match: /Accounting GL/i,     dates: "12/1~12/4、12/30~1/21" },
-      { match: /Credit Limit|Collateral|Loan/i,
-                                     dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Credit Limit/i,      dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
       { match: /HKMA Report/i,       dates: "12/1~12/4、12/28~1/21" },
-      { match: /Trade Finance|Remittance/i,
-                                     dates: "11/9~11/13、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
-      { match: /Treasury|MM|ALM/i,
-                                     dates: "11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Trade Finance/i,     dates: "11/9~11/13、12/8~12/11" },
+      { match: /Treasury\s*&\s*MM|Bond Trading|IRS\/CCS|Confirmation Matching/i,
+                                     dates: "11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~12/29" },
     ],
   },
 
@@ -1693,49 +1692,34 @@ function fmtDate(d) { return `${d.getMonth()+1}/${d.getDate()}`; }
 function fullFmt(d) { return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
 
 /**
- * 按 seed 更新云端 item 的「元字段」（name/dates/remarks/priority/status），
- * 但保留用户已编辑的业务内容（minutes/discussions/gapConclusion/nextStep 等）。
- * 新 seed 中新增的 id 会被补入；已从 seed 移除（或 status=merged）的 id 仍保留但 status 会同步。
+ * 以 CONFIG.seed（Plan 原文）为唯一模块主数据：
+ * - 名称/日期/优先级/类型/备注 强制同步（这些属于计划主数据，不是用户成果）
+ * - 保留用户成果：status / owner / minutes / discussions / disputes / gapConclusion / nextStep / changelog
+ * - 不在 Plan 内的历史遗留条目：有真实 Workshop 内容才保留（标 merged），否则直接丢弃
  */
 function migrateItemsToSeed(existing) {
-  const byId = Object.fromEntries(existing.map(i => [i.id, i]));
-  const seedIds = new Set(CONFIG.seed.map(s => s.id));
-  CONFIG.seed.forEach(seedItem => {
+  const byId = Object.fromEntries((existing || []).filter(Boolean).map(i => [i.id, i]));
+  const out = CONFIG.seed.map(seedItem => {
     const cur = byId[seedItem.id];
-    if (cur) {
-      const hasUserWork = (cur.minutes && cur.minutes.length) ||
-                          (cur.discussions && cur.discussions.length) ||
-                          (cur.disputes && cur.disputes.length) ||
-                          (cur.gapConclusion && cur.gapConclusion.length) ||
-                          (cur.nextStep && cur.nextStep.length);
-      // 如果该条目已经有用户编辑内容（Workshop 产物），不覆盖 name，避免改坏；但 dates/remarks 仍同步
-      if (!hasUserWork) {
-        cur.name = seedItem.name;
-      }
-      if (seedItem.dates) cur.dates = seedItem.dates;
-      if (seedItem.remarks && seedItem.remarks.length) cur.remarks = seedItem.remarks;
-      cur.priority = seedItem.priority;
-      cur.status = seedItem.status;
-    } else {
-      byId[seedItem.id] = structuredClone(seedItem);
-    }
+    if (!cur) return structuredClone(seedItem);
+    const m = { ...cur };
+    // 计划主数据：以 seed 为准，强制覆盖（避免旧版错误模块名残留）
+    m.name = seedItem.name;
+    m.dates = seedItem.dates;
+    m.priority = seedItem.priority;
+    m.type = seedItem.type;
+    if (seedItem.remarks && seedItem.remarks.length) m.remarks = seedItem.remarks;
+    return m;
   });
-  // 旧 seed 里已移除的条目（如 Advices & Forms、ALM 等被合并的）→ 保留数据但标 merged
-  Object.values(byId).forEach(it => {
-    if (!seedIds.has(it.id)) {
-      it.status = "merged";
-      if (!it.name || !it.name.includes("已合并")) {
-        it.name = (it.name || "?") + "（已合并至新模块）";
-      }
-      it.dates = it.dates || "";
-    }
-  });
-  const out = Object.values(byId);
-  out.sort((a, b) => {
-    const ma = a.status === "merged" ? 1 : 0;
-    const mb = b.status === "merged" ? 1 : 0;
-    if (ma !== mb) return ma - mb;
-    return (a.id || 0) - (b.id || 0);
+  const seedIds = new Set(CONFIG.seed.map(s => s.id));
+  (existing || []).filter(Boolean).forEach(it => {
+    if (seedIds.has(it.id)) return;
+    const hasUserWork = (it.minutes && it.minutes.length) ||
+                        (it.discussions && it.discussions.length) ||
+                        (it.disputes && it.disputes.length) ||
+                        (it.gapConclusion && it.gapConclusion.length) ||
+                        (it.nextStep && it.nextStep.length);
+    if (hasUserWork) out.push({ ...it, status: "merged" });
   });
   return out;
 }
@@ -1891,11 +1875,16 @@ function renderGantt() {
   };
   const barColorFor = prio => barPalette[prio] || "#7a5af5";
 
-  // --- 里程碑类型判断 ---
-  const kindOf = name => {
-    if (!name) return "workshop";
-    if (/Sign\s*Off/i.test(name) || /Confirmation/i.test(name)) return "gate";
-    if (/GAP\s*Solution|Refine\s*Document/i.test(name)) return "milestone-task";
+  // --- 里程碑类型判断：以 item.type 为准（Plan 原文里 Confirmation Matching 是模块而非 Gate） ---
+  const kindOf = item => {
+    if (!item) return "workshop";
+    if (item.type === "gate") return "gate";
+    if (item.type === "milestone") return "milestone-task";
+    if (item.type === "workshop") return "workshop";
+    // 兜底：兼容旧数据（无 type 字段）
+    const n = item.name || "";
+    if (/Sign\s*Off|Confirmation--/i.test(n)) return "gate";
+    if (/GAP\s*Solution|Refine\s*Document|Preparing the Doc|Doc Preparation/i.test(n)) return "milestone-task";
     return "workshop";
   };
   const editorName = CONFIG.editorName || "PMO";
@@ -1909,7 +1898,7 @@ function renderGantt() {
     // 先收集该批次的 Gate 里程碑（结束日菱形 + 垂直虚线）
     const gates = [];
     byPrio[batch].forEach(item => {
-      if (kindOf(item.name) !== "gate") return;
+      if (kindOf(item) !== "gate") return;
       parseDates(item.dates).forEach(seg => {
         gates.push({
           gateX: dateToX(seg.end) + G.dayWidth / 2,
@@ -1927,7 +1916,7 @@ function renderGantt() {
 
     // 每个 item 的任务条
     byPrio[batch].forEach((item, idx) => {
-      const kind = kindOf(item.name);
+      const kind = kindOf(item);
       const segs = parseDates(item.dates);
       const baseColor = barColorFor(item.priority);
       const isDone = ["confirmed", "signoff"].includes(item.status);
@@ -2016,7 +2005,7 @@ function renderGantt() {
     const p = prioOf(item.priority), st = statusOf(item.status);
     const segs = parseDates(item.dates);
     const ranges = segs.map(s => `${fullFmt(s.start)}${s.start.getTime() !== s.end.getTime() ? ` ~ ${fmtDate(s.end)}` : ""}`).join("<br>");
-    const typeTag = kindOf(item.name) === "gate" ? "🔴 Gate 里程碑（必须完成的检查点）" : kindOf(item.name) === "milestone-task" ? "📋 里程碑工作流" : "💼 Workshop 任务";
+    const typeTag = kindOf(item) === "gate" ? "🔴 Gate 里程碑（必须完成的检查点）" : kindOf(item) === "milestone-task" ? "📋 里程碑工作流" : "💼 Workshop 任务";
     const tips = linesOf(item.remarks).slice(0, 3);
     const cl = (item.changelog || []).slice(0, 2).map(c => `📝 ${esc(c.time)} · ${esc(c.user)}<br>   ${esc(c.action)}`).join("<br>");
     tooltip.innerHTML = `<strong>${esc(item.name)}</strong>
@@ -2169,10 +2158,14 @@ async function exportGanttJPG() {
   const FONT = '"PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif';
   const palette = { "第1轮": "#3349cc", "第2轮": "#078fb0", "第3轮": "#d95a15", "全项目": "#d93f3f" };
   const barColor = p => palette[p] || "#7a5af5";
-  const kindOfName = n => {
-    if (!n) return "workshop";
-    if (/Sign\s*Off/i.test(n) || /Confirmation/i.test(n)) return "gate";
-    if (/GAP\s*Solution|Refine\s*Document/i.test(n)) return "milestone-task";
+  const kindOfItem = it => {
+    if (!it) return "workshop";
+    if (it.type === "gate") return "gate";
+    if (it.type === "milestone") return "milestone-task";
+    if (it.type === "workshop") return "workshop";
+    const n = it.name || "";
+    if (/Sign\s*Off|Confirmation--/i.test(n)) return "gate";
+    if (/GAP\s*Solution|Refine\s*Document|Preparing the Doc|Doc Preparation/i.test(n)) return "milestone-task";
     return "workshop";
   };
 
@@ -2298,7 +2291,7 @@ async function exportGanttJPG() {
     y += BATCH_H;
 
     byPrio[batch].forEach((item, idx) => {
-      const kind = kindOfName(item.name);
+      const kind = kindOfItem(item);
       const segs = parseDates(item.dates);
       const unav = unavailOf(item);
       const rowTop = y;
