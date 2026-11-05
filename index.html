@@ -297,6 +297,9 @@
   /* today */
   .gantt-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #f53f3f; z-index: 4; pointer-events: none; }
   .gantt-today-label { position: absolute; transform: translateX(-50%); background: #f53f3f; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px; z-index: 5; white-space: nowrap; pointer-events: none; }
+  .gantt-topbar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .gantt-topbar .gantt-legend { padding: 0; flex: 1; }
+  .gantt-topbar .btn { flex-shrink: 0; white-space: nowrap; }
   .gantt-legend { display: flex; gap: 16px; padding: 10px 14px; font-size: 11.5px; color: var(--text-soft); flex-wrap: wrap; }
   .gantt-legend span { display: inline-flex; align-items: center; gap: 5px; }
   .gantt-legend .swatch { width: 18px; height: 11px; border-radius: 3px; flex-shrink: 0; }
@@ -353,7 +356,13 @@
     </table>
   </div>
 
-  <div class="card hidden" id="view-gantt"><div class="gantt-legend" id="gantt-legend"></div><div id="gantt-host"></div></div>
+  <div class="card hidden" id="view-gantt">
+    <div class="gantt-topbar">
+      <div class="gantt-legend" id="gantt-legend"></div>
+      <button class="btn ghost" id="btn-gantt-export" title="把整个甘特图导出为 JPG 图片（不含拖拽交互）">⬇️ 导出 JPG</button>
+    </div>
+    <div id="gantt-host"></div>
+  </div>
   <div class="board hidden" id="view-board"></div>
   <div class="hidden" id="view-tasks"></div>
   <div id="view-minutes" class="hidden" style="max-width:100%"></div>
@@ -2128,6 +2137,249 @@ function renderGantt() {
 
 }  // ← renderGantt 结束
 
+/* ============================================================
+   导出甘特图为 JPG（Canvas 手绘，无外部依赖）
+   ============================================================ */
+async function exportGanttJPG() {
+  const data = filtered();
+  if (!data.length) { showToast("⚠️ 当前筛选下没有数据可导出"); return; }
+  showToast("🖼 正在生成 JPG，请稍候…");
+  await new Promise(r => setTimeout(r, 80));
+
+  const PAD = 36, TITLE_H = 64, MONTH_H = 24, DAY_H = 26, ROW_H = 44, BATCH_H = 28, LEGEND_H = 52;
+  const LABEL_W = 310, DAY_W = 20, SCALE = 2;
+  const FONT = '"PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif';
+  const palette = { "第1轮": "#3349cc", "第2轮": "#078fb0", "第3轮": "#d95a15", "全项目": "#d93f3f" };
+  const barColor = p => palette[p] || "#7a5af5";
+  const kindOfName = n => {
+    if (!n) return "workshop";
+    if (/Sign\s*Off/i.test(n) || /Confirmation/i.test(n)) return "gate";
+    if (/GAP\s*Solution|Refine\s*Document/i.test(n)) return "milestone-task";
+    return "workshop";
+  };
+
+  const totalDays = daysBetween(G.start, G.end) + 1;
+  const chartW = totalDays * DAY_W;
+
+  const order = CONFIG.priorities.map(p => p.key);
+  const byPrio = {};
+  data.forEach(i => { const b = i.priority || "未分批"; (byPrio[b] = byPrio[b] || []).push(i); });
+  const batches = Object.keys(byPrio).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+
+  let bodyH = 0;
+  batches.forEach(b => { bodyH += BATCH_H + byPrio[b].length * ROW_H; });
+
+  const cw = PAD * 2 + LABEL_W + chartW;
+  const ch = PAD * 2 + TITLE_H + MONTH_H + DAY_H + bodyH + LEGEND_H;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(cw * SCALE);
+  canvas.height = Math.round(ch * SCALE);
+  const ctx = canvas.getContext("2d");
+  ctx.scale(SCALE, SCALE);
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, cw, ch);
+
+  const chartX = PAD + LABEL_W;
+  const headY = PAD + TITLE_H;
+  const dayY  = headY + MONTH_H;
+  const bodyY = dayY + DAY_H;
+
+  // ---- 绘制小工具 ----
+  const fillRect = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+  const hline = (x1, y, x2, c, lw = 1) => { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke(); };
+  const vline = (x, y1, y2, c, lw = 1) => { ctx.strokeStyle = c; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y2); ctx.stroke(); };
+  const text = (str, x, y, size, weight, color, align = "left") => {
+    ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = color; ctx.textAlign = align;
+    ctx.fillText(str, x, y); ctx.textAlign = "left";
+  };
+  const clip = (str, maxW, size = 11.5, weight = 600) => {
+    ctx.font = `${weight} ${size}px ${FONT}`;
+    if (ctx.measureText(str).width <= maxW) return str;
+    let s = str;
+    while (s.length && ctx.measureText(s + "…").width > maxW) s = s.slice(0, -1);
+    return s + "…";
+  };
+  const roundRect = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+  };
+  const diamond = (cx, cy, r, color) => {
+    ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy); ctx.closePath();
+    ctx.fillStyle = color; ctx.fill();
+  };
+
+  // ---- 标题 ----
+  text("K Bank 需求分析计划 · 甘特图", PAD, PAD + 20, 20, 700, "#141828");
+  const exportTime = new Date().toLocaleString("zh-CN", { hour12: false });
+  text(`计划周期 ${fullFmt(G.start)} ~ ${fullFmt(G.end)} · 共 ${totalDays} 天 · 导出时间 ${exportTime}`,
+    PAD, PAD + 44, 11.5, 400, "#8a92a3");
+
+  // ---- 周末底色（先画，作为背景） ----
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(G.start.getFullYear(), G.start.getMonth(), G.start.getDate() + i);
+    if (d.getDay() === 0 || d.getDay() === 6) {
+      fillRect(chartX + i * DAY_W, dayY, DAY_W, DAY_H + bodyH, "#f6f7fa");
+    }
+  }
+
+  // ---- 月份带 ----
+  let cur = new Date(G.start);
+  while (cur <= G.end) {
+    const first = new Date(cur.getFullYear(), cur.getMonth(), 1);
+    const last  = new Date(cur.getFullYear(), cur.getMonth() + 1, 0);
+    const ms = first < G.start ? G.start : first;
+    const me = last  > G.end   ? G.end   : last;
+    const x1 = chartX + dateToX(ms);
+    const x2 = chartX + dateToX(me) + DAY_W;
+    fillRect(x1, headY, x2 - x1, MONTH_H, "#f2f4f9");
+    vline(x1, headY, headY + MONTH_H, "#dfe3ec");
+    text(`${cur.getFullYear()}/${cur.getMonth() + 1}月`, (x1 + x2) / 2, headY + MONTH_H / 2, 11.5, 600, "#4b63ff", "center");
+    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+  }
+  vline(chartX + chartW, headY, headY + MONTH_H, "#dfe3ec");
+
+  // ---- 日期行 ----
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(G.start.getFullYear(), G.start.getMonth(), G.start.getDate() + i);
+    const x = chartX + i * DAY_W;
+    const isWk = d.getDay() === 0 || d.getDay() === 6;
+    vline(x, dayY, dayY + DAY_H, "#e6e9f0");
+    text(String(d.getDate()), x + DAY_W / 2, dayY + DAY_H / 2, 8.5, 400, isWk ? "#b0b6c2" : "#86909c", "center");
+  }
+  vline(chartX + chartW, dayY, dayY + DAY_H, "#e6e9f0");
+  hline(PAD, dayY + DAY_H, PAD + LABEL_W + chartW, "#dfe3ec");
+
+  // ---- 每日竖线（贯穿 body，轻） ----
+  for (let i = 0; i <= totalDays; i++) {
+    vline(chartX + i * DAY_W, bodyY, bodyY + bodyH, "#f1f3f7");
+  }
+
+  // ---- 行 ----
+  let y = bodyY;
+  batches.forEach(batch => {
+    const p = prioOf(batch);
+    // 批次标题行
+    fillRect(PAD, y, LABEL_W + chartW, BATCH_H, "#f8f9fc");
+    fillRect(PAD, y, 4, BATCH_H, p.text);
+    text(batch, PAD + 14, y + BATCH_H / 2, 12, 700, p.text);
+    const cnt = byPrio[batch].length;
+    text(`${cnt} 项`, PAD + 14 + ctx.measureText(batch).width + 10, y + BATCH_H / 2, 10, 400, "#8a92a3");
+    hline(PAD, y + BATCH_H, PAD + LABEL_W + chartW, "#e6e9f0");
+    y += BATCH_H;
+
+    byPrio[batch].forEach((item, idx) => {
+      const kind = kindOfName(item.name);
+      const segs = parseDates(item.dates);
+      const unav = unavailOf(item);
+      const rowTop = y;
+
+      // 行底色（斑马纹）
+      if (idx % 2 === 1) fillRect(PAD, rowTop, LABEL_W + chartW, ROW_H, "#fcfcfe");
+
+      // --- 左侧标签 ---
+      const nameTxt = item.name.replace(/【里程碑】/g, "");
+      text(clip(nameTxt, LABEL_W - 26, 11.5, 600), PAD + 10, rowTop + 13, 11.5, 600, "#1a1d24");
+      const metaTxt = `${item.dates || "—"} · ${statusOf(item.status).label}${item.owner ? " · " + item.owner : ""}`;
+      text(clip(metaTxt, LABEL_W - 26, 9.5, 400), PAD + 10, rowTop + 27, 9.5, 400, "#8a92a3");
+      if (unav.length) {
+        const unTxt = "不可用：" + unav.map(u => `${fmtDate(u.start)}~${fmtDate(u.end)}`).join("、");
+        text(clip(unTxt, LABEL_W - 26, 9, 400), PAD + 10, rowTop + 39, 9, 400, "#d93f3f");
+      }
+
+      // --- 不可用斜纹遮罩 ---
+      unav.forEach(u => {
+        const x1 = chartX + dateToX(u.start);
+        const x2 = chartX + dateToX(u.end) + DAY_W;
+        const ww = x2 - x1;
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x1, rowTop, ww, ROW_H); ctx.clip();
+        fillRect(x1, rowTop, ww, ROW_H, "rgba(245,63,63,.06)");
+        ctx.strokeStyle = "rgba(245,63,63,.18)"; ctx.lineWidth = 1;
+        for (let k = -ROW_H; k < ww; k += 6) {
+          ctx.beginPath(); ctx.moveTo(x1 + k, rowTop + ROW_H); ctx.lineTo(x1 + k + ROW_H, rowTop); ctx.stroke();
+        }
+        ctx.restore();
+      });
+
+      // --- 任务条 ---
+      const barH = 18;
+      const barY = rowTop + (ROW_H - barH) / 2;
+      segs.forEach(seg => {
+        const bx = chartX + dateToX(seg.start);
+        const bw = Math.max((daysBetween(seg.start, seg.end) + 1) * DAY_W - 2, 10);
+        const sameDay = seg.start.getTime() === seg.end.getTime();
+        const barLabel = `${seg.start.getMonth() + 1}/${seg.start.getDate()}${sameDay ? "" : `-${seg.end.getMonth() + 1}/${seg.end.getDate()}`}`;
+
+        if (kind === "gate") {
+          // Gate：浅红虚线框 + 末端菱形
+          ctx.strokeStyle = "rgba(217,63,63,.55)"; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+          fillRect(bx, barY, bw, barH, "rgba(217,63,63,.12)");
+          ctx.beginPath(); ctx.rect(bx, barY, bw, barH); ctx.stroke();
+          ctx.setLineDash([]);
+          diamond(bx + bw, rowTop + ROW_H / 2, 7, "#d93f3f");
+          if (bw >= 40) text("Gate", bx + 6, barY + barH / 2, 9, 700, "#d93f3f");
+        } else if (kind === "milestone-task") {
+          roundRect(bx, barY, bw, barH, 5);
+          ctx.fillStyle = "#7a5af5"; ctx.fill();
+          diamond(bx + 8, barY + barH / 2, 5, "#ffffff");
+          if (bw >= 54) text(barLabel, bx + 18, barY + barH / 2, 9, 600, "#ffffff");
+        } else {
+          roundRect(bx, barY, bw, barH, 6);
+          ctx.fillStyle = barColor(item.priority); ctx.fill();
+          if (bw >= 44) text(barLabel, bx + bw / 2, barY + barH / 2, 9, 600, "#ffffff", "center");
+        }
+      });
+
+      hline(PAD, rowTop + ROW_H, PAD + LABEL_W + chartW, "#f1f3f7");
+      y += ROW_H;
+    });
+  });
+
+  // ---- 图例 ----
+  const ly = bodyY + bodyH + LEGEND_H / 2 + 4;
+  let lx = PAD;
+  const legendItem = (drawSwatch, labelTxt) => {
+    drawSwatch(lx, ly);
+    text(labelTxt, lx + 24, ly, 10.5, 400, "#86909c");
+    lx += 24 + ctx.measureText(labelTxt).width + 26;
+  };
+  legendItem((x, yy) => {
+    roundRect(x, yy - 5, 18, 11, 3); ctx.fillStyle = "#3349cc"; ctx.fill();
+  }, "Workshop 任务条");
+  legendItem((x, yy) => diamond(x + 9, yy, 6, "#7a5af5"), "里程碑");
+  legendItem((x, yy) => {
+    ctx.save(); ctx.beginPath(); ctx.rect(x, yy - 5, 18, 11); ctx.clip();
+    fillRect(x, yy - 5, 18, 11, "rgba(245,63,63,.08)");
+    ctx.strokeStyle = "rgba(245,63,63,.35)"; ctx.lineWidth = 1;
+    for (let k = -11; k < 18; k += 5) { ctx.beginPath(); ctx.moveTo(x + k, yy + 6); ctx.lineTo(x + k + 11, yy - 6); ctx.stroke(); }
+    ctx.restore();
+  }, "该模块 Bank User 不可用（逐模块不同）");
+  legendItem((x, yy) => { fillRect(x + 8, yy - 6, 3, 12, "#f53f3f"); }, "今日");
+  text("数据来源：HK Branch Corebanking Req Plan V1.0", PAD + LABEL_W + chartW, ly, 10, 400, "#a8afbd", "right");
+
+  // ---- 导出 ----
+  try {
+    const url = canvas.toDataURL("image/jpeg", 0.92);
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}_${String(d.getHours()).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `KBank_Gantt_${stamp}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast(`✅ 已导出 JPG（${Math.round(cw)} × ${Math.round(ch)}）`);
+  } catch (e) {
+    console.error("[exportGanttJPG]", e);
+    showToast("❌ 导出失败：" + e.message);
+  }
+}
+
 /* ---- BA 汇总视图与导出（按批次→模块分组，供 BA 阅读并据此修改 FSD） ---- */
 const SECTIONS = [
   { key: "confirmed",     label: "确认点",           cls: "sec-c" },
@@ -2737,6 +2989,7 @@ document.querySelectorAll(".tab").forEach(tab =>
 
 // 🔗 Firebase 模式下不再区分本地/公网——所有人读写同一个云端，编辑自动同步
 $("#btn-new").onclick = () => openModal(null);
+$("#btn-gantt-export").onclick = exportGanttJPG;
 $("#btn-export-html").onclick = exportSummaryHTML;
 $("#btn-export-csv").onclick = exportSummaryCSV;
 $("#btn-export-minutes").onclick = exportAllMinutes;
