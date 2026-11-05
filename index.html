@@ -259,6 +259,9 @@
   .gantt-head .gantt-month { height: 32px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: var(--text); border-right: 1px solid var(--border); background: #fafbfd; border-bottom: 1px solid var(--border); }
   .gantt-head .gantt-day { height: 24px; font-size: 10px; color: var(--text-soft); padding-left: 2px; display: flex; align-items: flex-end; padding-bottom: 2px; border-right: 1px solid var(--border); background: #fcfcfd; }
   .gantt-head .gantt-day.weekend { background: #f4f4f7; color: #c0c6d0; }
+  .gantt-head .gantt-day.week-start { box-shadow: inset 2px 0 0 #b6c1d6; color: var(--text); font-weight: 700; }
+  .gantt-weekend-col { position: absolute; top: 0; bottom: 0; background: #f7f8fb; }
+  .gantt-week-line { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid #c6d0e2; }
   /* body */
   .gantt-body { position: relative; }
   .gantt-body .grid-row { display: grid; align-items: stretch; min-height: 40px; border-bottom: 1px solid var(--border); grid-column: 1 / -1; }
@@ -1844,7 +1847,18 @@ function renderGantt() {
   for (let i = 0; i < totalDays; i++) {
     const d = new Date(G.start.getFullYear(), G.start.getMonth(), G.start.getDate() + i);
     const isWknd = d.getDay() === 0 || d.getDay() === 6;
-    dayCells += `<div class="gantt-day ${isWknd ? "weekend" : ""}">${d.getDate()}</div>`;
+    const isMon = d.getDay() === 1;
+    dayCells += `<div class="gantt-day ${isWknd ? "weekend" : ""} ${isMon ? "week-start" : ""}">${d.getDate()}</div>`;
+  }
+
+  // --- 周结构：周末底色列 + 每周一深色分界线（画在 body overlay 里，贯穿全部行） ---
+  let weekendColsHTML = "";
+  let weekLinesHTML = "";
+  for (let i = 0; i < totalDays; i++) {
+    const d = new Date(G.start.getFullYear(), G.start.getMonth(), G.start.getDate() + i);
+    const x = i * G.dayWidth;
+    if (d.getDay() === 0 || d.getDay() === 6) weekendColsHTML += `<div class="gantt-weekend-col" style="left:${x}px;width:${G.dayWidth}px"></div>`;
+    if (d.getDay() === 1) weekLinesHTML += `<div class="gantt-week-line" style="left:${x}px"></div>`;
   }
 
   // --- unavailable 遮罩改为按行绘制（见下方 bodyHTML 每行 timeline-cell），此处不再画全局并集 ---
@@ -1986,7 +2000,7 @@ function renderGantt() {
         ${dayCells}
       </div>
       <div class="gantt-body gantt-grid" style="grid-template-columns:${colTemplate};position:relative">
-        <div class="gantt-shared-overlay" style="left:${labelW}px;width:${chartW}px">${todayHTML}${gateOverlaysHTML}</div>
+        <div class="gantt-shared-overlay" style="left:${labelW}px;width:${chartW}px">${weekendColsHTML}${weekLinesHTML}${todayHTML}${gateOverlaysHTML}</div>
         ${bodyHTML}
       </div>
     </div>
@@ -2250,20 +2264,24 @@ async function exportGanttJPG() {
   }
   vline(chartX + chartW, headY, headY + MONTH_H, "#dfe3ec");
 
-  // ---- 日期行 ----
+  // ---- 日期行（周一加粗，作为每周起点） ----
   for (let i = 0; i < totalDays; i++) {
     const d = new Date(G.start.getFullYear(), G.start.getMonth(), G.start.getDate() + i);
     const x = chartX + i * DAY_W;
     const isWk = d.getDay() === 0 || d.getDay() === 6;
+    const isMon = d.getDay() === 1;
     vline(x, dayY, dayY + DAY_H, "#e6e9f0");
-    text(String(d.getDate()), x + DAY_W / 2, dayY + DAY_H / 2, 8.5, 400, isWk ? "#b0b6c2" : "#86909c", "center");
+    text(String(d.getDate()), x + DAY_W / 2, dayY + DAY_H / 2, 8.5, isMon ? 700 : 400, isMon ? "#3a4356" : (isWk ? "#b0b6c2" : "#86909c"), "center");
   }
   vline(chartX + chartW, dayY, dayY + DAY_H, "#e6e9f0");
   hline(PAD, dayY + DAY_H, PAD + LABEL_W + chartW, "#dfe3ec");
 
-  // ---- 每日竖线（贯穿 body，轻） ----
+  // ---- 网格竖线：日常浅线 + 每周一深色周分界线（贯穿日期行+主体） ----
   for (let i = 0; i <= totalDays; i++) {
-    vline(chartX + i * DAY_W, bodyY, bodyY + bodyH, "#f1f3f7");
+    const d = new Date(G.start.getFullYear(), G.start.getMonth(), G.start.getDate() + i);
+    const isMon = i < totalDays && d.getDay() === 1;
+    if (isMon) vline(chartX + i * DAY_W, dayY, bodyY + bodyH, "#c3cddf", 1.4);
+    else vline(chartX + i * DAY_W, bodyY, bodyY + bodyH, "#f3f5f9");
   }
 
   // ---- 行 ----
