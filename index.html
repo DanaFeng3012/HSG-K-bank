@@ -396,6 +396,7 @@ const CONFIG = {
     { key: "waitconfirm", label: "待 User 确认",      color: "#fdf3d8", text: "#ad8b00" },
     { key: "confirmed",   label: "User 已确认",       color: "#eafaef", text: "#3bb066" },
     { key: "signoff",     label: "已 Sign-off",       color: "#e8f8f2", text: "#0fbf8f" },
+    { key: "merged",      label: "已合并（只读）",    color: "#f4f5f7", text: "#8a92a3" },
   ],
 
   // 批次（原优先级位）
@@ -424,32 +425,28 @@ const CONFIG = {
   ],
 
   seed: [
-    { id: 1,  name: "Foreign Exchange (EX) 外汇", priority: "第1轮", status: "plan", dates: "2026/11/2 ~ 11/4", actual: "", owner: "", remarks: ["行方BU不可用：11/9~13、11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"] },
-    { id: 2,  name: "Deposit (TD/DD) 存款", priority: "第1轮", status: "plan", dates: "2026/11/5 ~ 11/6", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 3,  name: "Common (BP) 公共", priority: "第1轮", status: "plan", dates: "2026/11/9 ~ 11/10", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 4,  name: "CIF (CI) 客户信息", priority: "第1轮", status: "plan", dates: "2026/11/11", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 5,  name: "Accounting GL (AI) 会计总账", priority: "第1轮", status: "plan", dates: "2026/11/12 ~ 11/13", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/30~1/21"] },
-    { id: 6,  name: "Credit Limit & Collateral & Loan (CL/LN) 信贷", priority: "第1轮", status: "plan", dates: "2026/11/16 ~ 11/18", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
-    { id: 7,  name: "【里程碑】GAP Solution ①（Req'd/Solution 评审定稿）", priority: "第1轮", status: "plan", dates: "2026/11/19 ~ 11/30", actual: "", owner: "" },
-    { id: 8,  name: "【里程碑】Refine Document ①", priority: "第1轮", status: "plan", dates: "2026/12/1 ~ 12/3", actual: "", owner: "" },
-    { id: 9,  name: "【里程碑】Confirmation ①（GAP+FSD 集中确认）", priority: "第1轮", status: "plan", dates: "2026/12/4 ~ 12/7", actual: "", owner: "" },
-    { id: 10, name: "Payment Connectivity 支付连接", priority: "第2轮", status: "plan", dates: "2026/11/19 ~ 11/23", actual: "", owner: "" },
-    { id: 11, name: "HKMA Report 监管报表", priority: "第2轮", status: "plan", dates: "2026/11/24 ~ 11/25", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/28~1/21"] },
-    { id: 12, name: "Advices & Forms 通知单与表单", priority: "第2轮", status: "plan", dates: "2026/11/26", actual: "", owner: "" },
-    { id: 13, name: "Operational & HO Report 运营报表", priority: "第2轮", status: "plan", dates: "2026/11/27", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/28~1/21"] },
-    { id: 14, name: "ALM related* 资产负债相关", priority: "第2轮", status: "plan", dates: "2026/11/30、12/7", actual: "", owner: "" },
-    { id: 15, name: "Trade Finance (TF) 贸易融资", priority: "第2轮", status: "plan", dates: "2026/12/1 ~ 12/4", actual: "", owner: "", remarks: ["行方BU不可用：11/9~13、12/8~11"] },
-    { id: 16, name: "【里程碑】GAP Solution ②（Req'd/Solution 评审定稿）", priority: "第2轮", status: "plan", dates: "2026/12/8 ~ 12/14", actual: "", owner: "" },
-    { id: 17, name: "【里程碑】Refine Document ②", priority: "第2轮", status: "plan", dates: "2026/12/15 ~ 12/16", actual: "", owner: "" },
-    { id: 18, name: "【里程碑】Confirmation ②（GAP+FSD 集中确认）", priority: "第2轮", status: "plan", dates: "2026/12/17 ~ 12/18", actual: "", owner: "" },
-    { id: 19, name: "Treasury & MM (IB/IL) 资金与货币市场", priority: "第3轮", status: "plan", dates: "2026/12/21 ~ 12/23", actual: "", owner: "", remarks: ["行方BU不可用：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"] },
-    { id: 20, name: "Bond Trading and Issuance 债券交易与发行", priority: "第3轮", status: "plan", dates: "2026/12/24 ~ 2027/1/4", actual: "", owner: "", remarks: ["行方BU不可用：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29"] },
-    { id: 21, name: "IRS/CCS 利率与货币互换", priority: "第3轮", status: "plan", dates: "2027/1/5 ~ 1/8", actual: "", owner: "" },
-    { id: 22, name: "Confirmation Matching 确认匹配", priority: "第3轮", status: "plan", dates: "2027/1/11", actual: "", owner: "" },
-    { id: 23, name: "Others 其他", priority: "第3轮", status: "plan", dates: "2027/1/12 ~ 1/15", actual: "", owner: "" },
-    { id: 24, name: "【里程碑】GAP Solution ③ + FS Document Cycle 1&2&3", priority: "第3轮", status: "plan", dates: "2027/1/18 ~ 1/22", actual: "", owner: "" },
-    { id: 25, name: "【里程碑】Refine Document ③", priority: "第3轮", status: "plan", dates: "2027/1/25 ~ 1/27", actual: "", owner: "" },
-    { id: 26, name: "【里程碑】Sign Off（Cycle 1&2&3 合并签署）", priority: "全项目", status: "plan", dates: "2027/1/28 ~ 1/29", actual: "", owner: "" },
+    // ======== V1.0 合并模块（按 HK Branch Corebanking_Req_Plan_V1.0_20261104.xlsx） ========
+    { id: 1,  name: "Foreign Exchange (EX) + Operational & HO Report 外汇+运营报表", priority: "第1轮", status: "plan", dates: "11/2 ~ 11/4、11/10", actual: "", owner: "", remarks: ["行方BU不可用：11/9~13、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 2,  name: "Deposit (TD/DD) + Advices & Forms 存款+通知单", priority: "第1轮", status: "plan", dates: "11/5 ~ 11/6", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 3,  name: "Common (BP) 公共", priority: "第1轮", status: "plan", dates: "11/9", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 4,  name: "CIF (CI) 客户信息", priority: "第1轮", status: "plan", dates: "11/11", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 5,  name: "Accounting GL (AI) + Report 会计总账+报表", priority: "第1轮", status: "plan", dates: "11/11", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/30~1/21"] },
+    { id: 6,  name: "Credit Limit & Collateral & Loan (CL/LN) + Advise + Operational & HO Report 信贷+通知单", priority: "第1轮", status: "plan", dates: "11/12 ~ 11/13、11/16 ~ 11/19", actual: "", owner: "", remarks: ["行方BU不可用：11/19~23、11/26~30、12/1~4、12/8~11、12/14~18、12/28~1/21"] },
+    { id: 7,  name: "【里程碑】Preparing the Doc（Gap Solution ① 准备文档）", priority: "第1轮", status: "plan", dates: "11/18 ~ 11/20、12/4", actual: "", owner: "" },
+    { id: 8,  name: "【里程碑】Review & Refine Document workshop-1", priority: "第1轮", status: "plan", dates: "12/1 ~ 12/3", actual: "", owner: "" },
+    { id: 9,  name: "【里程碑】Confirmation--1（集中确认）", priority: "第1轮", status: "plan", dates: "12/7", actual: "", owner: "" },
+    { id: 10, name: "Payment Connectivity 支付连接", priority: "第2轮", status: "plan", dates: "11/19 ~ 11/20", actual: "", owner: "" },
+    { id: 11, name: "HKMA Report 监管报表", priority: "第2轮", status: "plan", dates: "11/20、11/23 ~ 11/24", actual: "", owner: "", remarks: ["行方BU不可用：12/1~4、12/28~1/21"] },
+    { id: 12, name: "Trade Finance (TF) + Remittance + Operational & HO Report 贸易融资+汇款", priority: "第2轮", status: "plan", dates: "12/14 ~ 12/18", actual: "", owner: "", remarks: ["行方BU不可用：11/9~13、12/1~4、12/8~11、12/28~1/21"] },
+    { id: 13, name: "Treasury & MM (IB/IL) + ALM + Operational & HO Report 资金与货币市场+ALM", priority: "第3轮", status: "plan", dates: "12/7 ~ 12/11", actual: "", owner: "", remarks: ["行方BU不可用：11/26~30、12/1~4、12/8~11、12/14~18、12/28~29、12/28~1/21"] },
+    { id: 14, name: "Bond Trading and Issuance 债券交易与发行", priority: "第3轮", status: "plan", dates: "12/7 ~ 12/11", actual: "", owner: "" },
+    { id: 15, name: "Confirmation Matching 确认匹配", priority: "第3轮", status: "plan", dates: "12/21 ~ 12/23", actual: "", owner: "" },
+    { id: 16, name: "IRS/CCS 利率与货币互换", priority: "第3轮", status: "plan", dates: "1/11 ~ 1/14", actual: "", owner: "" },
+    { id: 17, name: "Others 其他", priority: "第3轮", status: "plan", dates: "1/18 ~ 1/22", actual: "", owner: "" },
+    { id: 18, name: "【里程碑】Doc Preparation（Gap Solution ② + FS Doc Cycle 1&2）", priority: "第2轮", status: "plan", dates: "11/25 ~ 11/27、11/30、12/24、12/28 ~ 12/31、1/4 ~ 1/8、1/15", actual: "", owner: "" },
+    { id: 19, name: "【里程碑】Review & Refine Document workshop-2", priority: "第2轮", status: "plan", dates: "1/25 ~ 1/27", actual: "", owner: "" },
+    { id: 20, name: "【里程碑】Sign Off--1 & 2（Cycle 1&2 合并签署）", priority: "全项目", status: "plan", dates: "1/28 ~ 1/29", actual: "", owner: "" },
+    { id: 21, name: "Payment Connectivity / Advices & Forms / Remittance（已合并至主模块，保留条目仅用于历史关联）", priority: "已合并", status: "merged", dates: "", actual: "", owner: "" },
   ],
 
   // 编辑弹窗字段
@@ -487,19 +484,23 @@ const CONFIG = {
     end:   new Date(2027, 0, 31),    // 2027-01-31
     // 各模块各自的 Bank User 不可用时间（逐模块，来源：Req Plan-20261029 Option 1 B 列）
     // → 甘特图按行分别遮罩，不再用全局并集
+    // 各模块各自的 Bank User 不可用时间（V1.0 合并后，取所合并模块不可用区间的并集）
+    // 来源：HK Branch Corebanking_Req_Plan_V1.0_20261104.xlsx 各合并行 B 列
     unavailableByModule: [
-      { match: /Foreign Exchange/i,  dates: "11/9~11/13、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~12/29" },
-      { match: /Deposit/i,           dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Foreign Exchange|Operational & HO/i,
+                                     dates: "11/9~11/13、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Deposit|Advices & Forms/i,
+                                     dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
       { match: /Common \(BP\)/i,     dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
       { match: /CIF/i,               dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
       { match: /Accounting GL/i,     dates: "12/1~12/4、12/30~1/21" },
-      { match: /Credit Limit/i,      dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Credit Limit|Collateral|Loan/i,
+                                     dates: "11/19~11/23、11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
       { match: /HKMA Report/i,       dates: "12/1~12/4、12/28~1/21" },
-      { match: /Operational & HO/i,  dates: "12/1~12/4、12/28~1/21" },
-      { match: /ALM related/i,       dates: "12/1~12/4、12/28~1/21" },
-      { match: /Trade Finance/i,     dates: "11/9~11/13、12/8~12/11" },
-      { match: /Treasury\s*&\s*MM|Bond Trading|IRS\/CCS|Confirmation Matching/i,
-                                     dates: "11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~12/29" },
+      { match: /Trade Finance|Remittance/i,
+                                     dates: "11/9~11/13、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
+      { match: /Treasury|MM|ALM/i,
+                                     dates: "11/26~11/30、12/1~12/4、12/8~12/11、12/14~12/18、12/28~1/21" },
     ],
   },
 
@@ -649,8 +650,9 @@ const store = {
     // 4) 合并：云端为准（云端删除/清空也必须生效），本地缓存只作离线兜底
     let finalItems;
     if (remoteItems && remoteItems.length) {
-      // 旧逻辑对 changelog/minutes 做并集，导致云端已删除的纪要/编辑记录被本地缓存"复活"
       finalItems = remoteItems.filter(Boolean);
+      // 4.1 执行 schema 迁移（按 id 合并 seed 元字段：name/dates/remarks/priority，保留用户编辑内容）
+      finalItems = migrateItemsToSeed(finalItems);
     } else if (localItems && localItems.length) {
       finalItems = localItems;
       setStatus("#f59e0b", "离线模式（用本地缓存）");
@@ -1677,6 +1679,54 @@ function daysBetween(a, b) {
 function dateToX(d) { return daysBetween(G.start, d) * G.dayWidth; }
 function fmtDate(d) { return `${d.getMonth()+1}/${d.getDate()}`; }
 function fullFmt(d) { return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
+
+/**
+ * 按 seed 更新云端 item 的「元字段」（name/dates/remarks/priority/status），
+ * 但保留用户已编辑的业务内容（minutes/discussions/gapConclusion/nextStep 等）。
+ * 新 seed 中新增的 id 会被补入；已从 seed 移除（或 status=merged）的 id 仍保留但 status 会同步。
+ */
+function migrateItemsToSeed(existing) {
+  const byId = Object.fromEntries(existing.map(i => [i.id, i]));
+  const seedIds = new Set(CONFIG.seed.map(s => s.id));
+  CONFIG.seed.forEach(seedItem => {
+    const cur = byId[seedItem.id];
+    if (cur) {
+      const hasUserWork = (cur.minutes && cur.minutes.length) ||
+                          (cur.discussions && cur.discussions.length) ||
+                          (cur.disputes && cur.disputes.length) ||
+                          (cur.gapConclusion && cur.gapConclusion.length) ||
+                          (cur.nextStep && cur.nextStep.length);
+      // 如果该条目已经有用户编辑内容（Workshop 产物），不覆盖 name，避免改坏；但 dates/remarks 仍同步
+      if (!hasUserWork) {
+        cur.name = seedItem.name;
+      }
+      if (seedItem.dates) cur.dates = seedItem.dates;
+      if (seedItem.remarks && seedItem.remarks.length) cur.remarks = seedItem.remarks;
+      cur.priority = seedItem.priority;
+      cur.status = seedItem.status;
+    } else {
+      byId[seedItem.id] = structuredClone(seedItem);
+    }
+  });
+  // 旧 seed 里已移除的条目（如 Advices & Forms、ALM 等被合并的）→ 保留数据但标 merged
+  Object.values(byId).forEach(it => {
+    if (!seedIds.has(it.id)) {
+      it.status = "merged";
+      if (!it.name || !it.name.includes("已合并")) {
+        it.name = (it.name || "?") + "（已合并至新模块）";
+      }
+      it.dates = it.dates || "";
+    }
+  });
+  const out = Object.values(byId);
+  out.sort((a, b) => {
+    const ma = a.status === "merged" ? 1 : 0;
+    const mb = b.status === "merged" ? 1 : 0;
+    if (ma !== mb) return ma - mb;
+    return (a.id || 0) - (b.id || 0);
+  });
+  return out;
+}
 
 /** 解析 dates 字符串 → 段数组 [{start,end}, ...]。支持多段、顿号分隔、跨年 */
 function parseDates(str) {
