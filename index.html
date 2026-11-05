@@ -665,7 +665,7 @@ const store = {
       // 4.1 执行 schema 迁移（按 id 合并 seed 元字段：name/dates/remarks/priority，保留用户编辑内容）
       finalItems = migrateItemsToSeed(finalItems);
     } else if (localItems && localItems.length) {
-      finalItems = localItems;
+      finalItems = migrateItemsToSeed(localItems.filter(Boolean));
       setStatus("#f59e0b", "离线模式（用本地缓存）");
     } else {
       finalItems = structuredClone(CONFIG.seed);
@@ -1042,7 +1042,8 @@ let items = [];
   // 云端为准：整体替换，不做并集（否则云端删掉的纪要/编辑记录会被当前页面缓存复活）
   window.__applyRemoteUpdate = (remoteItems) => {
     if (!remoteItems || !remoteItems.length) return;
-    items = remoteItems.filter(Boolean);
+    // 远端实时更新同样要过一遍 seed 迁移，否则旧模块名会随着每次同步重新冒出来
+    items = migrateItemsToSeed(remoteItems.filter(Boolean));
     localStorage.setItem(store._itemKey, JSON.stringify(items));
     initFilters();
     render();
