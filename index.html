@@ -1138,6 +1138,7 @@ async function syncTasksFromModules() {
           sourceItemId: item.id, sourceItemName: item.name,
           owner: parsed.owner, code: parsed.code, description: parsed.description,
           status: "todo", dueDate: "", createdAt: new Date(created).toISOString(), remark: "", archived: false, hash: parsed.hash,
+          followupRequired: "", department: "", contactPerson: "", loggedDate: "", feedback: "", pinned: false,
         });
         changes.created++;
       }
@@ -1145,6 +1146,7 @@ async function syncTasksFromModules() {
   });
   // 处理"模块被删 / 行动项被删" — 还留在 byHash 里的旧任务 → archived
   byHash.forEach(old => {
+    if (old.pinned) { newTasks.push(old); return; }   // 外部导入的登记表任务不被自动归档
     old.archived = true;
     newTasks.push(old);
     changes.archived++;
@@ -1348,10 +1350,16 @@ function renderTaskCol(label, color, bgColor, colTasks, viewType, colKey, emptyN
         </div>
         <div class="t-title">${esc(zhLine.slice(0, 140))}</div>
         ${enLine ? `<div class="t-title-en">${esc(enLine.trim().slice(0, 140))}</div>` : ""}
+        ${(t.department || t.contactPerson || t.followupRequired) ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;font-size:10.5px;color:var(--text-soft)">
+          ${t.department ? `<span style="background:#f2f3f5;padding:1px 6px;border-radius:4px">🏢 ${esc(t.department)}</span>` : ""}
+          ${t.contactPerson ? `<span>👤 ${esc(t.contactPerson)}</span>` : ""}
+          ${t.followupRequired ? `<span title="Follow-up Required">🔁 ${esc(t.followupRequired)}</span>` : ""}
+        </div>` : ""}
         <div class="t-foot">
           <span style="font-size:10px;color:${st.text};background:${st.color};padding:1px 6px;border-radius:4px;font-weight:600">${st.label}</span>
           ${t.dueDate ? `<span class="t-due ${dueCls}">⏳ ${t.dueDate}</span>` : `<span></span>`}
-          ${t.remark ? `<span class="t-remark-dot" title="有备注">🗒</span>` : `<span></span>`}
+          ${t.feedback ? `<span class="t-remark-dot" title="有跟进反馈">💬</span>` : ""}
+          ${t.remark ? `<span class="t-remark-dot" title="有备注">🗒</span>` : ""}
         </div>
       </div>`;
     });
@@ -1439,6 +1447,13 @@ function openTaskEdit(task) {
         <div class="field" style="margin:0"><label>任务编号 <span style="font-size:10.5px;color:var(--text-soft);font-weight:400">只读 🔒</span></label><input id="te-code" readonly value="${esc(t.code || "—")}"></div>
         <div class="field" style="margin:0"><label>截止日期</label><input id="te-due" type="date" value="${t.dueDate || ""}"></div>
       </div>
+      <!-- 登记表字段 -->
+      <div style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px;align-items:start">
+        <div class="field" style="margin:0"><label>Follow-up Required</label><input id="te-followup" placeholder="如：Yes - K Bank" value="${esc(t.followupRequired || "")}"></div>
+        <div class="field" style="margin:0"><label>Department</label><input id="te-dept" placeholder="如：Business" value="${esc(t.department || "")}"></div>
+        <div class="field" style="margin:0"><label>Contact Person</label><input id="te-contact" placeholder="如：P'Ning" value="${esc(t.contactPerson || "")}"></div>
+        <div class="field" style="margin:0"><label>Logged Date</label><input id="te-logged" type="date" value="${esc(t.loggedDate || "")}"></div>
+      </div>
       <div style="font-size:11px;color:var(--text-soft);margin-bottom:14px">📅 创建时间：${esc(createdAt)} · 任务 ID：<code style="font-family:ui-monospace,monospace;font-size:10.5px">${esc(t.id)}</code></div>
 
       <!-- 双语描述 -->
@@ -1452,6 +1467,12 @@ function openTaskEdit(task) {
           <label style="font-size:11px;color:var(--text-soft);margin-bottom:4px;display:block">🇬🇧 English</label>
           <textarea id="te-en" rows="4" placeholder="Full task description (English)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical">${esc(en.trim())}</textarea>
         </div>
+      </div>
+
+      <!-- 跟进反馈 -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-soft);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase">Feedback / 跟进反馈</div>
+        <textarea id="te-feedback" rows="3" placeholder="登记表中的跟进反馈、最新进展…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;resize:vertical">${esc(t.feedback || "")}</textarea>
       </div>
 
       <!-- 备注 -->
@@ -1494,6 +1515,11 @@ function openTaskEdit(task) {
     const status = chosenStatus;
     const dueDate = ov.querySelector("#te-due").value;
     const remark = ov.querySelector("#te-remark").value.trim();
+    const followupRequired = ov.querySelector("#te-followup").value.trim();
+    const department = ov.querySelector("#te-dept").value.trim();
+    const contactPerson = ov.querySelector("#te-contact").value.trim();
+    const loggedDate = ov.querySelector("#te-logged").value;
+    const feedback = ov.querySelector("#te-feedback").value.trim();
     const srcInput = (ov.querySelector("#te-source").value || "").trim();
     let srcId = "", srcName = "";
     if (srcInput) {
@@ -1510,10 +1536,11 @@ function openTaskEdit(task) {
         id: t.id, sourceItemId: srcId, sourceItemName: srcName,
         owner, code: t.code || "", description, status, dueDate,
         createdAt: new Date().toISOString(), remark, archived: false, hash: t.hash,
+        followupRequired, department, contactPerson, loggedDate, feedback, pinned: !!t.pinned,
       });
     } else {
       const idx = updated.findIndex(x => x.id === t.id);
-      if (idx >= 0) updated[idx] = { ...updated[idx], owner, description, status, dueDate, remark, sourceItemId: srcId, sourceItemName: srcName };
+      if (idx >= 0) updated[idx] = { ...updated[idx], owner, description, status, dueDate, remark, sourceItemId: srcId, sourceItemName: srcName, followupRequired, department, contactPerson, loggedDate, feedback };
     }
     await writeTasksToFirebase(updated);
     ov.remove();

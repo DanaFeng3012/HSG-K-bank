@@ -381,6 +381,28 @@ def import_json(path, dry_run=False):
 
         # 逐字段统计"新增多少条"（去重后）
         changes = []
+        # 可选：先清空指定字段（用于修订版纪要整体替换旧内容）
+        for field in (u.get("reset") or []):
+            n = len(it.get(field) or [])
+            if not dry_run:
+                it[field] = []
+            if n:
+                changes.append(f"{FIELD_LABELS.get(field, field)} 清空 -{n}")
+        # 可选：按值精确移除条目（用于替换某一轮纪要内容）
+        for key, vals in (u.get("remove") or {}).items():
+            if not vals:
+                continue
+            cur = it.get(key) or []
+            if key == "minutes":
+                titles = {v.get("title") for v in vals if isinstance(v, dict)}
+                kept = [m for m in cur if not (isinstance(m, dict) and m.get("title") in titles)]
+            else:
+                kept = [x for x in cur if x not in vals]
+            n = len(cur) - len(kept)
+            if not dry_run:
+                it[key] = kept
+            if n:
+                changes.append(f"{FIELD_LABELS.get(key, key)} 移除 -{n}")
         add_blob = u.get("add") or {}
         # 纪要原文件：条目里带 _file 路径则先上传到 /kbank-files
         for m in (add_blob.get("minutes") or []):
