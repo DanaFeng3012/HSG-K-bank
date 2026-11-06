@@ -1062,15 +1062,19 @@ let items = [];
 // 从模块的 nextStep 字符串解析出 { owner, code, description, hash }
 function parseNextStep(text, sourceItemId, sourceItemName) {
   if (!text || !text.trim()) return null;
+  let t = text.trim();
+  // 忽略轮次前缀 【R1】/【R2】/【第2轮】，避免被误当成责任方
+  const round = t.match(/^【\s*(?:R|W|Round|第)\s*\d+[\s\S]*?】\s*/i);
+  if (round) t = t.slice(round[0].length);
   // 匹配开头标记 【Owner · Code】 或 【Owner·Code】 或 [Owner · Code]
-  const mark = text.match(/^[【\[]([^\]】]+?)[】\]]\s*/);
+  const mark = t.match(/^[【\[]([^\]】]+?)[】\]]\s*/);
   let owner = "未识别", code = "";
-  let body = text;
+  let body = t;
   if (mark) {
     const inner = mark[1];
-    body = text.slice(mark[0].length);
-    // 内部再拆 owner 和 code
-    const m = inner.match(/^([^·．.]+?)\s*[·．.]\s*([A-Za-z0-9]+)\s*$/);
+    body = t.slice(mark[0].length);
+    // 内部再拆 owner 和 code（支持 "K Bank · A1" 与 "KBank A1" 两种写法）
+    const m = inner.match(/^([^·．.]*?)\s*[·．.]?\s*([A-Z]\d+)\s*$/);
     if (m) {
       owner = m[1].trim();
       code = m[2].trim();
