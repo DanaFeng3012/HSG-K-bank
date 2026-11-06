@@ -166,34 +166,40 @@
   /* 任务看板 */
   /* 任务看板 · 状态分列（标准 Kanban 风格） */
   #view-tasks { width: 100%; box-sizing: border-box; margin: 0; padding: 0; overflow: hidden; }
-  .tboard-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: 100%; box-sizing: border-box; margin: 0; padding: 0; }
-  @media (max-width: 1100px) { .tboard-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 620px)  { .tboard-cols { grid-template-columns: 1fr; } }
-  .tboard-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; min-height: 200px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
-  .tboard-col-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; flex-shrink: 0; }
-  .tboard-col-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
+  .tboard-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; width: 100%; box-sizing: border-box; margin: 0; padding: 0; }
+  @media (max-width: 1320px) { .tboard-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 720px)  { .tboard-cols { grid-template-columns: 1fr; } }
+  .tboard-col { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; min-height: 220px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+  .tboard-col-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; flex-shrink: 0; }
+  .tboard-col-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; letter-spacing: .02em; white-space: nowrap; }
   .tboard-col-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .tboard-col-count { font-size: 11px; background: var(--border); color: var(--text-soft); padding: 2px 8px; border-radius: 10px; font-weight: 700; flex-shrink: 0; }
-  .tboard-col-body { flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 80px; min-width: 0; overflow: hidden; }
+  .tboard-col-count { font-size: 12px; background: var(--border); color: var(--text-soft); padding: 2px 9px; border-radius: 10px; font-weight: 700; flex-shrink: 0; }
+  .tboard-col-body { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 80px; min-width: 0; overflow: hidden; }
   .tboard-col.empty { background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 10px, rgba(0,0,0,.02) 10px, rgba(0,0,0,.02) 20px); }
-  .tboard-empty { padding: 16px 6px; font-size: 12px; color: var(--text-soft); text-align: center; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); }
+  .tboard-empty { padding: 16px 6px; font-size: 12.5px; color: var(--text-soft); text-align: center; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); }
   /* 拖拽相关 */
   .t-task[draggable="true"] { cursor: grab; }
   .t-task.dragging { opacity: .35; transform: scale(.97); }
   .tboard-col.drop-hover { border-color: var(--accent); background: rgba(75,99,255,.06); box-shadow: 0 0 0 2px rgba(75,99,255,.18); }
   .tboard-col.drop-hover .tboard-empty { display: none; }
   .tboard-col.drag-over-hint::after { content: "📥 拖放至此"; display:block; text-align:center; padding:10px; font-size:11px; color:var(--accent); font-weight:700; border:1.5px dashed var(--accent); border-radius:8px; margin-top:auto; }
-  .t-task { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); padding: 8px 10px; background: #fff; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; min-width: 0; overflow: hidden; }
-  .t-task:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.08); }
-  .t-task.t-done { opacity: .55; text-decoration: line-through; }
-  .t-task .t-row1 { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; flex-wrap: wrap; min-width: 0; }
-  .t-task .t-owner { font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; flex-shrink: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-  .t-task .t-code { font-family: ui-monospace, monospace; font-size: 10.5px; background: var(--border); padding: 1px 5px; border-radius: 4px; color: var(--text-soft); font-weight: 700; flex-shrink: 0; }
-  .t-task .t-src { font-size: 10.5px; color: var(--text-soft); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .t-task .t-title { font-size: 12.5px; font-weight: 600; line-height: 1.4; color: var(--text); margin-bottom: 3px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
-  .t-task .t-title-en { font-size: 11px; color: var(--text-soft); line-height: 1.35; margin-bottom: 4px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
-  .t-task .t-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-soft); }
-  .t-task .t-due { padding: 1px 6px; border-radius: 4px; background: var(--border); font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+  .t-task { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 12px; padding: 14px 15px; background: #fff; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; min-width: 0; overflow: hidden; box-shadow: 0 1px 2px rgba(20,24,40,.03); }
+  .t-task:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.09); }
+  .t-task.t-done { opacity: .6; }
+  .t-task .t-row1 { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; flex-wrap: wrap; min-width: 0; }
+  .t-task .t-owner { font-size: 11.5px; padding: 2px 9px; border-radius: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; flex-shrink: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .t-task .t-rfp { font-family: ui-monospace, monospace; font-size: 11.5px; font-weight: 700; background: #eef0f4; color: #5b6272; border: 1px solid #e2e5ea; padding: 2px 8px; border-radius: 6px; flex-shrink: 0; letter-spacing: .01em; }
+  .t-task .t-code { font-family: ui-monospace, monospace; font-size: 11.5px; background: var(--border); padding: 2px 7px; border-radius: 5px; color: var(--text-soft); font-weight: 700; flex-shrink: 0; }
+  .t-task .t-src { font-size: 11.5px; color: var(--text-soft); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .t-task .t-req { background: #f7f8fa; border: 1px dashed #dfe3ea; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 12px; line-height: 1.55; color: #7c8396; word-break: break-word; }
+  .t-task .t-req-label { font-size: 10px; font-weight: 800; letter-spacing: .09em; color: #98a0b0; margin-right: 6px; }
+  .t-task .t-title { font-size: 14px; font-weight: 650; line-height: 1.5; color: var(--text); margin-bottom: 4px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
+  .t-task .t-title-en { font-size: 12px; color: var(--text-soft); line-height: 1.5; margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; }
+  .t-task .t-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .t-task .t-meta span { font-size: 11.5px; background: #f2f3f5; color: #62697a; border-radius: 5px; padding: 3px 8px; line-height: 1.35; }
+  .t-task .t-remark-box { font-size: 12px; color: #8a92a3; line-height: 1.55; border-left: 2px solid #eceef2; padding-left: 9px; margin-bottom: 8px; white-space: pre-wrap; word-break: break-word; }
+  .t-task .t-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-soft); border-top: 1px dashed #eceef2; padding-top: 9px; }
+  .t-task .t-due { padding: 2px 8px; border-radius: 5px; background: var(--border); font-weight: 600; white-space: nowrap; flex-shrink: 0; }
   .t-task .t-due.overdue { background: #fde2e2; color: #f53f3f; }
   .t-task .t-remark-dot { color: #f77234; }
 
@@ -1084,8 +1090,11 @@ function parseNextStep(text, sourceItemId, sourceItemName) {
   }
   // owner 标准化
   const oKey = normalizeOwner(owner);
+  // 从行动项正文里顺手提取 RFP 需求编号（如 FX-REQ-101），便于卡片展示
+  const reqM = body.match(/\b[A-Z][A-Za-z]{1,6}-REQ-\d{2,4}\b/);
+  const rfpId = reqM ? reqM[0].toUpperCase() : "";
   const hash = simpleHash(`${sourceItemId}|${body.trim()}`);
-  return { owner: oKey, ownerRaw: owner, code, description: body.trim(), hash };
+  return { owner: oKey, ownerRaw: owner, code, description: body.trim(), rfpId, hash };
 }
 
 function normalizeOwner(raw) {
@@ -1123,9 +1132,15 @@ async function syncTasksFromModules() {
   const changes = { created: 0, updated: 0, archived: 0 };
   const created = Date.now();
 
+  // 已用登记表任务（pinned）管理的模块，不再从 nextStep 自动生成，避免重复/覆盖
+  const pinnedModules = new Set(
+    tasks.filter(t => t.pinned && !t.archived).map(t => String(t.sourceItemId))
+  );
+
   // 所有模块 nextStep 合并
   const newTasks = [];
   items.forEach(item => {
+    if (pinnedModules.has(String(item.id))) return;
     const steps = linesOf(item.nextStep);
     steps.forEach(text => {
       const parsed = parseNextStep(text, item.id, item.name);
@@ -1133,7 +1148,7 @@ async function syncTasksFromModules() {
       const existing = byHash.get(parsed.hash);
       if (existing) {
         // 已有 — 保留手动字段 (status/dueDate/remark/ownerEdited)，更新 source 信息
-        newTasks.push({ ...existing, sourceItemId: item.id, sourceItemName: item.name, owner: parsed.owner, code: parsed.code, description: parsed.description });
+        newTasks.push({ ...existing, sourceItemId: item.id, sourceItemName: item.name, owner: parsed.owner, code: parsed.code, description: parsed.description, rfpId: existing.rfpId || parsed.rfpId || "" });
         byHash.delete(parsed.hash);
       } else {
         // 新增
@@ -1143,6 +1158,7 @@ async function syncTasksFromModules() {
           owner: parsed.owner, code: parsed.code, description: parsed.description,
           status: "todo", dueDate: "", createdAt: new Date(created).toISOString(), remark: "", archived: false, hash: parsed.hash,
           followupRequired: "", department: "", contactPerson: "", loggedDate: "", feedback: "", pinned: false,
+          rfpId: parsed.rfpId || "", reqDescription: "", actionItem: "",
         });
         changes.created++;
       }
@@ -1168,6 +1184,13 @@ function overdueCheck(due) {
   if (!due) return "";
   const d = new Date(due), today = new Date(); today.setHours(0,0,0,0); d.setHours(0,0,0,0);
   return d < today ? "overdue" : "";
+}
+
+// 本地日期 +N 天，返回 YYYY-MM-DD（新建任务默认 T+3）
+function addDaysISO(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 // 任务看板：子 tab（状态 / 责任方 / 模块）切换渲染
@@ -1333,6 +1356,30 @@ function renderTasks() {
   });
 }
 
+// 辅助：从任务对象里解析出 RFP 编号 / 需求描述 / 行动项
+function taskReqInfo(t) {
+  const descLines = (t.description || "").split("\n").map(s => s.trim()).filter(Boolean);
+  let rfpId = (t.rfpId || "").trim();
+  let reqDesc = (t.reqDescription || "").trim();
+  let action = (t.actionItem || "").trim();
+  if (!rfpId) {
+    const m = (t.description || "").match(/\b[A-Z][A-Za-z]{1,6}-REQ-\d{2,4}\b/);
+    if (m) rfpId = m[0].toUpperCase();
+  }
+  if (!reqDesc && descLines.length > 1) {
+    const m = descLines[1].match(/^([A-Z][A-Za-z]{1,6}-REQ-\d{2,4})\s*[:：]\s*(.+)$/);
+    if (m) { reqDesc = m[2]; if (!rfpId) rfpId = m[1].toUpperCase(); }
+  }
+  if (!action) action = descLines[0] || "";
+  // 英文补充行（次行以字母开头、且不是 REQ 描述）
+  let en = "";
+  if (descLines.length > 1) {
+    const l = descLines[1];
+    if (/^[A-Za-z]/.test(l) && !/^[A-Z][A-Za-z]{1,6}-REQ-/.test(l)) en = l;
+  }
+  return { rfpId, reqDesc, action, en };
+}
+
 // 辅助：渲染一列（通用）+ 拖拽支持
 function renderTaskCol(label, color, bgColor, colTasks, viewType, colKey, emptyName) {
   const isEmpty = colTasks.length === 0;
@@ -1341,29 +1388,33 @@ function renderTaskCol(label, color, bgColor, colTasks, viewType, colKey, emptyN
     colTasks.forEach(t => {
       const ow = ownerOpt(t.owner);
       const st = statusOpt(t.status);
-      const descLines = (t.description || "").split("\n");
-      const zhLine = descLines.find(l => l.trim() && !/^\s*[A-Za-z]/.test(l)) || descLines[0] || "";
-      const enLine = descLines.find((l, i) => i > 0 && /^\s{0,2}[A-Za-z]/.test(l)) || "";
+      const { rfpId, reqDesc, action, en } = taskReqInfo(t);
       const dueCls = overdueCheck(t.dueDate);
       const doneCls = t.status === "done" ? "t-done" : "";
+      const srcShort = (t.sourceItemName || "—").replace(/\s+/g, " ").slice(0, 44);
+      const reqShort = reqDesc ? (reqDesc.replace(/\s+/g, " ").slice(0, 160) + (reqDesc.length > 160 ? "…" : "")) : "";
       cardsHtml = cardsHtml + `<div class="t-task ${doneCls}" draggable="true" style="border-left-color:${color}" data-id="${t.id}">
         <div class="t-row1">
+          <span class="t-rfp" title="模块 RFP 需求编号（只读）">${esc(rfpId || "—")}</span>
           <span class="t-owner" style="background:${ow.color};color:${ow.text}">${esc(ow.label)}</span>
-          ${t.code ? `<span class="t-code">${esc(t.code)}</span>` : ""}
-          <span class="t-src">${esc(t.sourceItemName || "—")}</span>
+          <span class="t-src" title="${esc(t.sourceItemName || "")}">${esc(srcShort)}</span>
         </div>
-        <div class="t-title">${esc(zhLine.slice(0, 140))}</div>
-        ${enLine ? `<div class="t-title-en">${esc(enLine.trim().slice(0, 140))}</div>` : ""}
-        ${(t.department || t.contactPerson || t.followupRequired) ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;font-size:10.5px;color:var(--text-soft)">
-          ${t.department ? `<span style="background:#f2f3f5;padding:1px 6px;border-radius:4px">🏢 ${esc(t.department)}</span>` : ""}
-          ${t.contactPerson ? `<span>👤 ${esc(t.contactPerson)}</span>` : ""}
+        <div class="t-req" title="${esc(reqDesc || "")}"><span class="t-req-label">REQ</span>${esc(reqShort || "—  未关联 RFP 需求描述")}</div>
+        <div class="t-title">${esc(action.slice(0, 300))}</div>
+        ${en ? `<div class="t-title-en">${esc(en.slice(0, 300))}</div>` : ""}
+        <div class="t-meta">
           ${t.followupRequired ? `<span title="Follow-up Required">🔁 ${esc(t.followupRequired)}</span>` : ""}
-        </div>` : ""}
+          ${t.department ? `<span title="Department">🏢 ${esc(t.department)}</span>` : ""}
+          ${t.contactPerson ? `<span title="Contact Person">👤 ${esc(t.contactPerson)}</span>` : ""}
+          ${t.code ? `<span title="任务编号">${esc(t.code)}</span>` : ""}
+        </div>
+        ${t.remark ? `<div class="t-remark-box">🗒 ${esc(t.remark.slice(0, 200))}</div>` : ""}
         <div class="t-foot">
-          <span style="font-size:10px;color:${st.text};background:${st.color};padding:1px 6px;border-radius:4px;font-weight:600">${st.label}</span>
-          ${t.dueDate ? `<span class="t-due ${dueCls}">⏳ ${t.dueDate}</span>` : `<span></span>`}
-          ${t.feedback ? `<span class="t-remark-dot" title="有跟进反馈">💬</span>` : ""}
-          ${t.remark ? `<span class="t-remark-dot" title="有备注">🗒</span>` : ""}
+          <span style="font-size:11px;color:${st.text};background:${st.color};padding:2px 8px;border-radius:5px;font-weight:600">${st.label}</span>
+          <span style="display:flex;align-items:center;gap:8px;min-width:0">
+            ${t.feedback ? `<span class="t-remark-dot" title="有跟进反馈">💬</span>` : ""}
+            ${t.dueDate ? `<span class="t-due ${dueCls}">⏳ ${t.dueDate}</span>` : `<span class="t-due">⏳ 未设截止</span>`}
+          </span>
         </div>
       </div>`;
     });
@@ -1388,6 +1439,9 @@ function openTaskEdit(task) {
   };
   const st = statusOpt(t.status);
   const ow = ownerOpt(t.owner);
+  const reqInfo = taskReqInfo(t);
+  // 新建任务截止日期默认 T+3（可修改）
+  const dueValue = isNew ? (t.dueDate || addDaysISO(3)) : (t.dueDate || "");
 
   // 从双语描述里拆中文/英文
   const fullDesc = t.description || "";
@@ -1444,12 +1498,22 @@ function openTaskEdit(task) {
         </div>
       </div>
 
+      <!-- RFP 需求（只读） -->
+      <div style="background:#f7f8fa;border:1px dashed #dfe3ea;border-radius:8px;padding:10px 12px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--text-soft);text-transform:uppercase">RFP Requirement 🔒</span>
+          <span class="t-rfp" style="font-size:12px">${esc(reqInfo.rfpId || "—")}</span>
+        </div>
+        <label style="font-size:11px;color:var(--text-soft);display:block;margin-bottom:4px">Requirement Description（只读，不可修改）</label>
+        <textarea readonly rows="2" style="width:100%;padding:8px 10px;border:1px solid #e2e5ea;border-radius:6px;font-size:12.5px;line-height:1.55;background:#eef0f4;color:#6b7280;resize:none;cursor:not-allowed">${esc(reqInfo.reqDesc || "—")}</textarea>
+      </div>
+
       <!-- 字段网格：4 列自适应，label 统一不折行 -->
       <div style="display:grid;grid-template-columns:4fr 1.2fr 1fr 1.4fr;gap:10px;margin-bottom:14px;align-items:start">
         <div class="field" style="margin:0"><label>来源模块 <span title="可直接输入，也可从候选中选择已有模块或会议纪要提取的模块名" style="color:var(--text-soft);font-size:11px;cursor:help">ⓘ</span></label><input id="te-source" list="te-source-list" placeholder="如：Foreign Exchange (EX) 外汇" value="${esc(currentSrcName)}"><datalist id="te-source-list">${moduleDatalist}</datalist></div>
         <div class="field" style="margin:0"><label>责任方</label><select id="te-owner">${CONFIG.tasks.owners.map(o => `<option value="${o.key}" ${o.key === t.owner ? "selected" : ""}>${o.label}</option>`).join("")}</select></div>
         <div class="field" style="margin:0"><label>任务编号 <span style="font-size:10.5px;color:var(--text-soft);font-weight:400">只读 🔒</span></label><input id="te-code" readonly value="${esc(t.code || "—")}"></div>
-        <div class="field" style="margin:0"><label>截止日期</label><input id="te-due" type="date" value="${t.dueDate || ""}"></div>
+        <div class="field" style="margin:0"><label>截止日期 <span style="font-size:10.5px;color:var(--text-soft);font-weight:400">${isNew ? "默认 T+3" : "可修改"}</span></label><input id="te-due" type="date" value="${dueValue}"></div>
       </div>
       <!-- 登记表字段 -->
       <div style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px;align-items:start">
@@ -1541,10 +1605,11 @@ function openTaskEdit(task) {
         owner, code: t.code || "", description, status, dueDate,
         createdAt: new Date().toISOString(), remark, archived: false, hash: t.hash,
         followupRequired, department, contactPerson, loggedDate, feedback, pinned: !!t.pinned,
+        rfpId: t.rfpId || "", reqDescription: t.reqDescription || "", actionItem: zhT || t.actionItem || "",
       });
     } else {
       const idx = updated.findIndex(x => x.id === t.id);
-      if (idx >= 0) updated[idx] = { ...updated[idx], owner, description, status, dueDate, remark, sourceItemId: srcId, sourceItemName: srcName, followupRequired, department, contactPerson, loggedDate, feedback };
+      if (idx >= 0) updated[idx] = { ...updated[idx], owner, description, status, dueDate, remark, sourceItemId: srcId, sourceItemName: srcName, followupRequired, department, contactPerson, loggedDate, feedback, actionItem: zhT || updated[idx].actionItem || "" };
     }
     await writeTasksToFirebase(updated);
     ov.remove();
